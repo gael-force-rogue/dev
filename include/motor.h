@@ -7,10 +7,10 @@ using namespace vex;
 
 class MotorCluster {
   private:
-    motor &motor1, &motor2, &motor3;
+    motor &motor1, &motor2;
 
   public:
-    MotorCluster(motor &motor1, motor &motor2, motor &motor3);
+    MotorCluster(motor &motor1, motor &motor2);
 
     /// @brief Spins the motors with the given velocity
     /// @param velocity From -100 to 100

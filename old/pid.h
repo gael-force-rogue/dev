@@ -1,5 +1,5 @@
-#ifndef DRIVETRAIN_H
-#define DRIVETRAIN_H
+#ifndef PID_H
+#define PID_H
 
 #include "motor.h"
 #include "vex.h"
@@ -10,13 +10,13 @@ enum ManeuverType {
     SWING
 };
 
-class SmartDrivetrain {
+class PIDController {
   private:
     MotorCluster &leftCluster, &rightCluster;
     inertial &inertialSensor;
 
   public:
-    SmartDrivetrain(MotorCluster &leftCluster, MotorCluster &rightCluster, inertial &inertialSensor);
+    PIDController(MotorCluster &leftCluster, MotorCluster &rightCluster, inertial &inertialSensor);
 
     /// @brief Performs a PID maneuver to reach a target position or angle
     /// @param kP Propotional constant
@@ -38,4 +38,4 @@ class SmartDrivetrain {
     void startOdometryLoop();
 };
 
-#endif // DRIVETRAIN_H
+#endif // PID_H

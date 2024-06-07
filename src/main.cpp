@@ -7,52 +7,65 @@
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 #include "config.h"
-#include "drivetrain.h"
 #include "motor.h"
+#include "odom.h"
+#include "pid.h"
+#include "tuner.h"
 #include "vex.h"
+#include <functional>
+#include <iostream>
 
 using namespace vex;
 
-competition Competition = competition();
-brain Brain = brain();
-controller Controller = controller();
+competition Competition;
+brain Brain;
+controller Controller;
 
-motor left1 = motor(MOTOR_LEFT_1);
-motor left2 = motor(MOTOR_LEFT_2);
-motor left3 = motor(MOTOR_LEFT_3);
-motor right1 = motor(MOTOR_RIGHT_1);
-motor right2 = motor(MOTOR_RIGHT_2);
-motor right3 = motor(MOTOR_RIGHT_3);
+motor left1(MOTOR_LEFT_1);
+motor left2(MOTOR_LEFT_2);
+// motor left3(MOTOR_LEFT_3);
+motor right1(MOTOR_RIGHT_1);
+motor right2(MOTOR_RIGHT_2);
+// motor right3(MOTOR_RIGHT_3);
 
-MotorCluster leftMotorCluster(left1, left2, left3);
-MotorCluster rightMotorCluster(right1, right2, right3);
+MotorCluster leftMotorCluster(left1, left2);
+MotorCluster rightMotorCluster(right1, right2);
+inertial inertialSensor(INERTIAL_SENSOR);
 
-void driverControl() {
-    while (true) {
-        int x = Controller.Axis1.position();
-        int y = Controller.Axis3.position();
-        bool activateEbrake = Controller.ButtonA.pressing();
+Chassis chassis(leftMotorCluster, rightMotorCluster, inertialSensor);
 
-        if (activateEbrake) {
-            leftMotorCluster.stop(hold);
-            rightMotorCluster.stop(hold);
-        } else {
-            leftMotorCluster.setDefaultBrakeMode(coast);
-            rightMotorCluster.setDefaultBrakeMode(coast);
-
-            leftMotorCluster.spin(x + y);
-            rightMotorCluster.spin(x - y);
-        }
-    }
-}
+PIDController pidController(chassis);
+OdometryController odomController(LEFT_TRACKER_OFFSET, RIGHT_TRACKER_OFFSET, SIDEWAYS_TRACKER_OFFSET, WHEEL_RADIUS);
 
 void autonomous() {
-    inertial inertialSensor = inertial(INERTIAL_SENSOR);
-    SmartDrivetrain smartDrivetrain(leftMotorCluster, rightMotorCluster, inertialSensor);
+};
+
+void driverControl() {
+    leftMotorCluster.setDefaultBrakeMode(coast);
+    rightMotorCluster.setDefaultBrakeMode(coast);
+
+    while (true) {
+        int x = Controller.Axis3.position();
+        int y = Controller.Axis1.position();
+
+        leftMotorCluster.spin(x + y);
+        rightMotorCluster.spin(x - y);
+    }
 };
 
 int main() {
-    // Competition.drivercontrol(driverControl);
-    // Competition.autonomous(autonomous);
-    driverControl();
+    Competition.drivercontrol(driverControl);
+    Competition.autonomous(autonomous);
+
+    ConfigTuner configTuner(Controller, 0.1, {"kP", "kI", "kD", "slew", "accuracy", "target", "maxSpeed", "timeout"}, {0.1, 0, 0, 0.1, 5, 1000, 100, 5000});
+
+    while (true) {
+        auto action = configTuner.checkForAction();
+        if (action == START) {
+            auto config = configTuner.config();
+            pidController.manuever({DRIVE, config["kP"], config["kI"], config["kD"], config["slew"], config["accuracy"]}, config["target"], config["maxSpeed"], config["timeout"]);
+        } else if (action == MODIFIED) {
+        }
+        wait(100, msec);
+    }
 }
