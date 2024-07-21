@@ -1,41 +1,57 @@
 #ifndef PID_H
 #define PID_H
 
-#include "motor.h"
-#include "vex.h"
+#include "chassis.h"
+#include "config.h"
+#include <map>
 
-enum ManeuverType {
+enum ManueverType {
     DRIVE,
     TURN,
-    SWING
+    SWING,
+
+    // NOT AN ACTUAL MANUEVER - only here for config :)
+    HEADING
+};
+
+struct PIDConfig {
+    float kP, kI, kD, slew, accuracy;
+};
+
+class PIDStateManager {
+public:
+    float kP, kI, kD;
+
+    float previousError = 100000,
+          runningIntegral = 0,
+          previousMotorPower = 0;
+
+    PIDStateManager(float kP, float kI, float kD) : kP(kP), kI(kI), kD(kD){};
+
+    float update(float error);
 };
 
 class PIDController {
-  private:
-    MotorCluster &leftCluster, &rightCluster;
-    inertial &inertialSensor;
+private:
+    Chassis &chassis;
 
-  public:
-    PIDController(MotorCluster &leftCluster, MotorCluster &rightCluster, inertial &inertialSensor);
+public:
+    // Configuration
+    std::map<ManueverType, PIDConfig> config = {
+        {DRIVE, {DRIVE_PID_kP, DRIVE_PID_kI, DRIVE_PID_kD, DRIVE_PID_ACCURACY}},
+        {TURN, {TURN_PID_kP, TURN_PID_kI, TURN_PID_kD, TURN_PID_ACCURACY}},
+        {SWING, {SWING_PID_kP, SWING_PID_kI, SWING_PID_kD, SWING_PID_ACCURACY}},
+        {HEADING, {HEADING_PID_kP, HEADING_PID_kI, HEADING_PID_kD, 0.1}},
+    };
 
-    /// @brief Performs a PID maneuver to reach a target position or angle
-    /// @param kP Propotional constant
-    /// @param kI Integral constant
-    /// @param kD Derivative constant
-    /// @param slew The maximum change in motor power per iteration
-    /// @param accuracy The error within the target that is acceptable
-    /// @param maxSpeed The maximum speed of the robot before ending the loop
-    /// @param target The target position or angle
-    /// @param maneuverType The type of maneuver to perform
-    void maneuver(float kP, float kI, float kD,
-                  float slew, float accuracy, float maxSpeed,
-                  float target, ManeuverType maneuverType);
+    PIDController(Chassis &chassis) : chassis(chassis){};
 
-    void driveForDistance(float distance);
-    void turnForAngle(float angle);
-    void swingForAngle(float angle);
-
-    void startOdometryLoop();
+    /// @brief  Drives the robot to a target position with Heading PID
+    /// @param manueverType - See ManueverType
+    /// @param target - Target position
+    /// @param maxSpeed - Maximum speed (0 - 100)
+    /// @param timeout - Safety timeout in milliseconds
+    void manuever(ManueverType manueverType, float target, float maxSpeed, float timeout);
 };
 
-#endif // PID_H
+#endif  // PID_H

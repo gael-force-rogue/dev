@@ -1,16 +1,17 @@
-#include "pid.h"
-#include "vex.h"
+#include <tuner.h>
+
 #include <iostream>
 #include <map>
 #include <string>
-#include <tuner.h>
 #include <tuple>
 #include <vector>
 
+#include "pid.h"
+#include "vex.h"
+
 // Generic Configuration Tuner
 ConfigTuner::ConfigTuner(controller &Controller, float incrementBy, std::vector<std::string> keys, std::vector<float> values)
-    : Controller(Controller), incrementBy(incrementBy), keys(keys), values(values) {
-
+    : Controller(Controller), keys(keys), values(values), incrementBy(incrementBy) {
     if (keys.size() != values.size()) {
         std::cerr << "Keys and values must be the same size" << std::endl;
         exit(1);
@@ -45,12 +46,13 @@ ConfigTunerAction ConfigTuner::checkForAction() {
 
 void ConfigTuner::render() {
     Controller.Screen.clearScreen();
-    Controller.Screen.setCursor(1, 1);
+    Controller.Screen.setCursor(0, 1);
     Controller.Screen.print(keys[currentIndex].c_str());
     Controller.Screen.newLine();
     Controller.Screen.print(values[currentIndex]);
 };
 
+// Data Manipulation
 void ConfigTuner::previous() {
     if (currentIndex == 0) {
         currentIndex = lastIndex;
@@ -58,6 +60,7 @@ void ConfigTuner::previous() {
         currentIndex--;
     }
 };
+
 void ConfigTuner::next() {
     if (currentIndex == lastIndex) {
         currentIndex = 0;

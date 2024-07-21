@@ -2,13 +2,13 @@
 #define CONFIG_H
 
 // Devices & Robot
-#define INERTIAL_SENSOR PORT20
-#define MOTOR_LEFT_1 PORT6, true
-#define MOTOR_LEFT_2 PORT10, true
-#define MOTOR_LEFT_3 PORT16, true
-#define MOTOR_RIGHT_1 PORT16
-#define MOTOR_RIGHT_2 PORT20
-#define MOTOR_RIGHT_3 PORT13
+#define INERTIAL_SENSOR PORT18
+#define MOTOR_LEFT_1 PORT6, BLUE_6, true
+#define MOTOR_LEFT_2 PORT10, BLUE_6, true
+#define MOTOR_LEFT_3 PORT9, BLUE_6
+#define MOTOR_RIGHT_1 PORT20, BLUE_6
+#define MOTOR_RIGHT_2 PORT16, BLUE_6
+#define MOTOR_RIGHT_3 PORT17, BLUE_6, true
 
 // Odometry
 #define WHEEL_RADIUS 3.25
@@ -22,22 +22,24 @@
 #define SIDEWAYS_TRACKER_OFFSET 6.5
 
 // PID Constants
-#define DRIVE_PID_kP 0.1
+#define DRIVE_PID_kP 0.4f
 #define DRIVE_PID_kI 0.0
-#define DRIVE_PID_kD 10.0
-#define DRIVE_PID_SLEW 0.3
-#define DRIVE_PID_ACCURACY 10.0
+#define DRIVE_PID_kD 0.5
+#define DRIVE_PID_ACCURACY 1.0
+
+#define HEADING_PID_kP 0.5
+#define HEADING_PID_kI 0.0
+#define HEADING_PID_kD 0.9
+#define HEADING_PID_ACCURACY 1.0
 
 #define TURN_PID_kP 0.0
 #define TURN_PID_kI 0.0
 #define TURN_PID_kD 0.0
-#define TURN_PID_SLEW 0.0
 #define TURN_PID_ACCURACY 0.0
 
 #define SWING_PID_kP 0.0
 #define SWING_PID_kI 0.0
 #define SWING_PID_kD 0.0
-#define SWING_PID_SLEW 0.0
 #define SWING_PID_ACCURACY 0.0
 
-#endif // CONFIG_H
+#endif  // CONFIG_H

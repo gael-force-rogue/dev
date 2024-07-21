@@ -6,10 +6,10 @@
 
 class Chassis {
   public:
-    MotorCluster leftCluster, &rightCluster;
+    MotorCluster &leftCluster, &rightCluster;
     inertial &inertialSensor;
 
-    Chassis(MotorCluster leftCluster, MotorCluster &rightCluster, inertial inertialSensor) : leftCluster(leftCluster), rightCluster(rightCluster), inertialSensor(inertialSensor){};
+    Chassis(MotorCluster &leftCluster, MotorCluster &rightCluster, inertial &inertialSensor);
     void arcade(float lateral, float angular);
     void tank(float left, float right);
 };

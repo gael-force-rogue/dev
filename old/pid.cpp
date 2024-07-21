@@ -1,101 +1,82 @@
 #include "pid.h"
-#include "config.h"
-#include "motor.h"
+
+#include <algorithm>
+#include <cmath>
 #include <functional>
 #include <iostream>
 
-template <typename T>
-T abs(T value) {
-    return copysign(value, 1);
-}
+#include "config.h"
+#include "vex.h"
 
-template <typename T>
-T clamp(T value, T minValue, T maxValue) {
-    return std::max(std::min(value, maxValue), minValue);
-}
+float normalize180(float angle) {
+    while (angle < -180) {
+        angle += 360;
+    }
+    while (angle >= 180) {
+        angle -= 360;
+    }
+    return angle;
+};
 
-PIDController::PIDController(MotorCluster &leftCluster, MotorCluster &rightCluster, inertial &inertialSensor)
-    : leftCluster(leftCluster), rightCluster(rightCluster), inertialSensor(inertialSensor){};
+float PIDStateManager::update(float error) {
+    this->runningIntegral += error;
+    this->previousError = error;
 
-// Basic PID
-void PIDController::maneuver(float kP, float kI, float kD,
-                             float slew, float accuracy, float maxSpeed,
-                             float target, ManeuverType maneuverType) {
-    float error = accuracy, previousError = 0;
-    float integral = 0, derivative = 0;
-    float motorPower = 0, previousMotorPower = 0;
+    return (error * kP) + (runningIntegral * kI) + ((error - previousError) * kD);
+};
 
-    float leftMultiplier = 1, rightMultiplier = 1;
-    std::function<float()> positionLambda;
-    if (maneuverType == DRIVE) {
-        positionLambda = [&]() { return (leftCluster.averagePosition() + rightCluster.averagePosition()) / 2; };
-    } else {
-        positionLambda = [&]() { return inertialSensor.rotation(); };
+void PIDController::manuever(ManueverType manueverType, float target, float maxSpeed, float timeout) {
+    // Configuration & Global Info
+    auto currentStateManager = PIDStateManager(config[manueverType].kP, config[manueverType].kI, config[manueverType].kD);
+    const float startingAngle = chassis.inertialSensor.heading();
+    const float accuracy = config[manueverType].accuracy;
 
-        if (maneuverType == TURN) {
-            rightMultiplier = -1;
-        } else if (maneuverType == SWING) {
-            if (target > 0) {
-                leftMultiplier = 0;
+    chassis.leftCluster.stop(hold);
+    chassis.rightCluster.stop(hold);
+
+    timer safetyTimer;
+
+    if (manueverType == DRIVE) {
+        auto headingStateManager = PIDStateManager(config[HEADING].kP, config[HEADING].kI, config[HEADING].kD);
+        const float leftStartingPosition = chassis.leftCluster.averagePosition();
+        const float rightStartingPosition = chassis.rightCluster.averagePosition();
+
+        do {
+            float lateralError = target - ((chassis.leftCluster.averagePosition() - leftStartingPosition + chassis.rightCluster.averagePosition() - rightStartingPosition) / 2);
+            float angularError = normalize180(startingAngle - chassis.inertialSensor.heading());
+
+            float lateralMotorPower = currentStateManager.update(lateralError);
+            float angularMotorPower = headingStateManager.update(angularError);
+
+            chassis.arcade(lateralMotorPower, angularMotorPower);
+
+            wait(20, msec);
+        } while (std::abs(currentStateManager.previousError) >= accuracy && safetyTimer.time() < timeout);
+    } else if (manueverType == TURN) {
+        do {
+            float error = normalize180(target - chassis.inertialSensor.heading());
+            float motorPower = currentStateManager.update(error);
+
+            chassis.arcade(0, motorPower);
+
+            wait(20, msec);
+        } while (abs(currentStateManager.previousError) >= accuracy || safetyTimer.time() < timeout);
+    } else if (manueverType == SWING) {
+        const float right = target > 0;
+
+        do {
+            float error = target - chassis.leftCluster.averagePosition();
+            float motorPower = currentStateManager.update(error);
+
+            if (right) {
+                chassis.tank(0, motorPower);
             } else {
-                rightMultiplier = 0;
-            }
-        } else {
-            std::cout << "Invalid maneuver type!" << std::endl;
-        }
-    }
-    leftMultiplier *= 100;
-    rightMultiplier *= 100;
+                chassis.tank(motorPower, 0);
+            };
 
-    leftCluster.setDefaultBrakeMode(hold);
-    rightCluster.setDefaultBrakeMode(hold);
+            wait(20, msec);
+        } while (abs(currentStateManager.previousError) >= accuracy && safetyTimer.time() < timeout);
+    };
 
-    std::cout << error << " " << accuracy << " " << leftCluster.averageVelocity() << std::endl;
-
-    // Keep going until accuracy reached and robot is not going too fast
-    while (abs(error) >= accuracy ||
-           abs(leftCluster.averageVelocity()) > maxSpeed || abs(rightCluster.averageVelocity()) > maxSpeed) {
-        error = target - positionLambda();
-        std::cout << error << std::endl;
-        integral += error;
-        derivative = error - previousError;
-        previousError = error;
-
-        // Calculate motor power & clamp to [-1, 1]
-        motorPower = (kP * error) + (kI * integral) + (kD * derivative);
-        motorPower = clamp(motorPower, -1.0f, 1.0f);
-
-        // Slew rate limiter
-        if (slew != 0)
-            motorPower = clamp(motorPower, previousMotorPower - slew, previousMotorPower + slew);
-
-        // Perform the actual movement
-        leftCluster.spin(motorPower * leftMultiplier);
-        rightCluster.spin(motorPower * rightMultiplier);
-
-        task::sleep(10);
-    }
-
-    leftCluster.spin(0);
-    rightCluster.spin(0);
-
-    task::sleep(500);
-};
-
-void PIDController::driveForDistance(float distance) {
-    maneuver(DRIVE_PID_kP, DRIVE_PID_kI, DRIVE_PID_kD,
-             DRIVE_PID_SLEW, DRIVE_PID_ACCURACY, DRIVE_PID_MAX_SPEED,
-             distance, DRIVE);
-};
-
-void PIDController::turnForAngle(float angle) {
-    maneuver(TURN_PID_kP, TURN_PID_kI, TURN_PID_kD,
-             TURN_PID_SLEW, TURN_PID_ACCURACY, TURN_PID_MAX_SPEED,
-             angle, TURN);
-};
-
-void PIDController::swingForAngle(float angle) {
-    maneuver(SWING_PID_kP, SWING_PID_kI, SWING_PID_kD,
-             SWING_PID_SLEW, SWING_PID_ACCURACY, SWING_PID_MAX_SPEED,
-             angle, SWING);
+    safetyTimer.~timer();
 };

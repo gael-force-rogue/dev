@@ -1,11 +1,12 @@
 #ifndef TUNER_H
 #define TUNER_H
 
-#include "pid.h"
-#include "vex.h"
 #include <map>
 #include <tuple>
 #include <vector>
+
+#include "pid.h"
+#include "vex.h"
 
 enum ConfigTunerAction {
     START,
@@ -15,19 +16,16 @@ enum ConfigTunerAction {
 };
 
 class ConfigTuner {
-  private:
+   public:
     controller Controller;
 
     float lastIndex;
     int currentIndex = 0;
-    std::vector<std::string>
-        keys;
-    std::vector<float>
-        values;
+    std::vector<std::string> keys;
+    std::vector<float> values;
 
     float incrementBy;
 
-  public:
     /// @brief Construct a new Config Tuner object
     /// @param Controller vex::controller
     /// @param incrementBy How much to increment or decrement a value by
@@ -37,7 +35,6 @@ class ConfigTuner {
 
     void render();
     ConfigTunerAction checkForAction();
-    std::map<std::string, float> config();
 
     // Choose what constant is tunable now
     void previous();
@@ -48,4 +45,4 @@ class ConfigTuner {
     void decrement();
 };
 
-#endif // TUNER_H
+#endif  // TUNER_H

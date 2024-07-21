@@ -3,19 +3,19 @@
 
 #include "vex.h";
 
-using namespace vex;
-
 class MotorCluster {
-  private:
-    motor &motor1, &motor2;
+private:
+    motor &motor1, &motor2, &motor3;
 
-  public:
-    MotorCluster(motor &motor1, motor &motor2);
+public:
+    MotorCluster(motor &motor1, motor &motor2, motor &motor3) : motor1(motor1), motor2(motor2), motor3(motor3){};
 
     /// @brief Spins the motors with the given velocity
     /// @param velocity From -100 to 100
-    void spin(int velocity);
+    void spin(float velocity);
+    /// @brief Stops the motors with the given brake mode
     void stop(brakeType mode);
+    /// @brief Sets the default brake mode for when spin(0) is called
     void setDefaultBrakeMode(brakeType mode);
 
     /// @brief Returns the average velocity of the motors. -100 to 100
@@ -23,6 +23,8 @@ class MotorCluster {
     /// @brief Returns the average position of the motor encoders in degrees
     float averagePosition();
     void resetPosition();
+
+    void spinFor(double rotation, double velocity);
 };
 
-#endif // MOTOR_H
+#endif  // MOTOR_H
