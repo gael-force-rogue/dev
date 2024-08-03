@@ -14,11 +14,6 @@ struct PIDConfig {
     float kP, kI, kD, accuracy;
 };
 
-#define PIDControllerConfig_DRIVE drive
-#define PIDControllerConfig_HEADING heading
-#define PIDControllerConfig_TURN turn
-#define PIDControllerConfig_SWING swing
-
 struct PIDControllerConfig {
     PIDConfig drive, heading, turn, swing;
 
@@ -37,7 +32,7 @@ struct PIDControllerConfig {
 };
 
 class PIDAlgorithm {
-private:
+public:
     PIDConfig config;
 
     float runningIntegral = 0,
@@ -46,8 +41,7 @@ private:
 
     float startingTime, timeout;
 
-public:
-    PIDAlgorithm(PIDConfig config, float timeout = 0) : config(config), timeout(timeout) {
+    PIDAlgorithm(PIDConfig config, float timeout) : config(config), timeout(timeout) {
         startingTime = vex::timer::system();
     };
 
@@ -63,7 +57,7 @@ public:
     };
 
     inline bool shouldContinue() {
-        return fabs(previousError) > config.accuracy || (vex::timer::system() - startingTime) < timeout;
+        return fabs(previousError) > config.accuracy && (vex::timer::system() - startingTime) < timeout;
     };
 };
 
@@ -73,7 +67,7 @@ private:
     vex::inertial &inertialSensor;
 
 public:
-    PIDController(vpp::Drivetrain &drivetrain, vex::inertial &inertialSensor) : drivetrain(drivetrain), inertialSensor(inertialSensor){};
+    PIDController(vpp::Drivetrain &drivetrain, vex::inertial &inertialSensor) : drivetrain(drivetrain), inertialSensor(inertialSensor) {};
 
     PIDControllerConfig config{
         {DRIVE_PID_kP, DRIVE_PID_kI, DRIVE_PID_kD, DRIVE_PID_ACCURACY},

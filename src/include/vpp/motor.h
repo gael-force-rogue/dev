@@ -31,7 +31,12 @@ namespace vpp {
         /// @param port Which brain port the motor is connected to
         /// @param motorCartridgeType The cartridge type of the motor
         /// @param reverse Whether the motor is reversed or not
-        Motor(int32_t port, MotorCartridgeType motorCartridgeType, bool reverse = false) : motor(vex::motor(port, static_cast<vex::gearSetting>(motorCartridgeType), reverse)){};
+        Motor(int32_t port, MotorCartridgeType motorCartridgeType, bool reverse = false) : motor(vex::motor(port, static_cast<vex::gearSetting>(motorCartridgeType), reverse)) {};
+
+        /// @brief Creates a Motor with a blue 6:1 cartridge
+        /// @param port Which brain port the motor is connected to
+        /// @param reverse Whether the motor is reversed or not
+        Motor(int32_t port, bool reverse = false) : motor(vex::motor(port, vex::gearSetting::ratio6_1, reverse)) {};
 
         /// @brief Spins the motor.
         /// @param velocity The velocity to spin the motor at ranging from -100 to 100
@@ -43,6 +48,11 @@ namespace vpp {
         /// @param type The stop mode to use
         inline void stop(MotorStopMode type) {
             motor.stop(static_cast<vex::brakeType>(type));
+        };
+
+        /// @brief Stops the motor with the default stop mode
+        inline void stop() {
+            motor.stop();
         };
 
         /// @brief Sets the defualt stop mode of the motor
@@ -69,7 +79,7 @@ namespace vpp {
         int motorCount;
 
     public:
-        MotorGroup(std::vector<std::reference_wrapper<Motor>> motors) : motors(motors), motorCount(motors.size()){};
+        MotorGroup(std::vector<std::reference_wrapper<Motor>> motors) : motors(motors), motorCount(motors.size()) {};
 
         /// @brief Spins all motors
         /// @param velocity velocity (-100 to 100)
@@ -84,6 +94,13 @@ namespace vpp {
         inline void stop(MotorStopMode mode) {
             for (auto &motor : motors) {
                 motor.get().stop(mode);
+            }
+        }
+
+        /// @brief Stops all motors with the default stop mode
+        inline void stop() {
+            for (auto &motor : motors) {
+                motor.get().stop();
             }
         }
 

@@ -4,12 +4,14 @@
 #include "vpp/motor.h"
 #include <algorithm>
 
+#define CLAMP(expr, lower, upper) std::max(lower, std::min(expr, upper))
+
 namespace vpp {
     class Drivetrain {
     public:
         MotorGroup &leftGroup, &rightGroup;
 
-        Drivetrain(MotorGroup &left, MotorGroup &right) : leftGroup(left), rightGroup(right){};
+        Drivetrain(MotorGroup &left, MotorGroup &right) : leftGroup(left), rightGroup(right) {};
 
         /// @brief Drives with arcade controls
         /// @param lateral Lateral input
@@ -19,6 +21,10 @@ namespace vpp {
             leftGroup.spin(lateral + angular);
             rightGroup.spin(lateral - angular);
         };
+
+        inline void arcade(float lateral, float angular, float maxSpeed) {
+            tank(CLAMP(lateral + angular, -maxSpeed, maxSpeed), CLAMP(lateral - angular, -maxSpeed, maxSpeed));
+        }
 
         /// @brief Drives with tank controls
         /// @param left Left motor group speed
