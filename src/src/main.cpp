@@ -14,6 +14,7 @@
 #include "vpp.h"
 
 #include "pid.h"
+#include "odom.h"
 
 using namespace vpp;
 
@@ -45,6 +46,7 @@ vex::inertial inertialSensor(INERTIAL_SENSOR);
 
 // Controllers & Algorithms
 PIDController pidController(drivetrain, inertialSensor);
+Odometry odometry;
 
 void clampTask() {
     controller.vibrate(". .");
@@ -98,14 +100,14 @@ void drivercontrol() {
     };
 };
 
-// void odometryTask() {
-//     std::cout << "Odometry task: " << vex::this_thread::get_id() << std::endl;
+void odometryTask() {
+    std::cout << "Odometry task: " << vex::this_thread::get_id() << std::endl;
 
-//     while (true) {
-//         drivetrain.update();
-//         wait(20);
-//     }
-// };
+    while (true) {
+        odometry.update(leftMotorGroup.averagePosition(), rightMotorGroup.averagePosition(), inertialSensor.heading());
+        wait(10);
+    }
+};
 
 void autonomous() {
     inertialSensor.calibrate();
