@@ -37,7 +37,7 @@ void PIDController::drive(float target, float maxSpeed, float timeout) {
 
         drivetrain.arcade(lateralMotorPower, angularMotorPower);
 
-        wait(20);
+        sleep(20);
     } while (algorithm.shouldContinue());
 
     std::cout << "Done" << std::endl;
@@ -54,6 +54,6 @@ void PIDController::turn(float target, float maxSpeed, float timeout) {
 
         drivetrain.arcade(0, motorPower, maxSpeed);
 
-        wait(20);
+        sleep(20);
     } while (algorithm.shouldContinue());
 };
