@@ -48,6 +48,7 @@ vex::inertial inertialSensor(INERTIAL_SENSOR);
 PIDController pidController(drivetrain, inertialSensor);
 Odometry odometry;
 
+// Driver Control
 void clampTask() {
     controller.vibrate(". .");
     bool clampIsActive = false;
@@ -56,7 +57,7 @@ void clampTask() {
     std::cout << "Clamp task: " << vex::this_thread::get_id() << std::endl;
 
     while (true) {
-        if (controller.B()) {
+        if (controller.ButtonB()) {
             if (clampIsActive) {
                 clamp.open();
             } else {
@@ -66,7 +67,7 @@ void clampTask() {
             clampIsActive = !clampIsActive;
             do {
                 vex::this_thread::sleep_for(20);
-            } while (controller.B());
+            } while (controller.ButtonB());
         };
     }
 }
@@ -83,29 +84,30 @@ void drivercontrol() {
 
         drivetrain.arcade(y, x * 0.6);
 
-        if (controller.R1()) {
+        if (controller.ButtonR1()) {
             intake.spin(100);
-        } else if (controller.R2()) {
+        } else if (controller.ButtonR2()) {
             intake.spin(-100);
-        } else if (controller.L1()) {
+        } else if (controller.ButtonL1()) {
             lift.spin(100);
-        } else if (controller.L2()) {
+        } else if (controller.ButtonL2()) {
             lift.spin(-100);
         } else {
             intake.stop();
             lift.stop();
         };
 
-        vex::this_thread::sleep_for(20);
+        sleep(20);
     };
 };
 
+// Autonomous
 void odometryTask() {
     std::cout << "Odometry task: " << vex::this_thread::get_id() << std::endl;
 
     while (true) {
         odometry.update(leftMotorGroup.averagePosition(), rightMotorGroup.averagePosition(), inertialSensor.heading());
-        wait(10);
+        sleep(10);
     }
 };
 
@@ -116,6 +118,15 @@ void autonomous() {
 };
 
 int main() {
+    if (Competition.isCompetitionSwitch()) {
+        Competition.drivercontrol(drivercontrol);
+        Competition.autonomous(autonomous);
+    }
+
     // autonomous();
     drivercontrol();
+
+    while (true) {
+        sleep(1000);
+    }
 }
