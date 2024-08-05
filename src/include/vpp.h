@@ -7,9 +7,9 @@
 #include "vex.h"
 
 namespace vpp {
-    /// @brief Synonymous to vex::wait but forces milliseconds
+    /// @brief Sleeps the current thread for a specified amount of time
     /// @param time Time to wait in milliseconds
-    inline void wait(int time) { vex::wait(time, vex::msec); };
+    inline void sleep(int time) { vex::this_thread::sleep_for(time); };
 
     const int PORT1 = vex::PORT1;
     const int PORT2 = vex::PORT2;
