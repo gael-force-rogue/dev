@@ -44,9 +44,26 @@ Motor intake(MOTOR_INTAKE);
 vex::pneumatics clamp(Brain.ThreeWirePort.H);
 vex::inertial inertialSensor(INERTIAL_SENSOR);
 
-// Controllers & Algorithms
+// Autonomous
 PIDController pidController(drivetrain, inertialSensor);
-Odometry odometry;
+Odometry odometry(LEFT_TRACKER_OFFSET, RIGHT_TRACKER_OFFSET, WHEEL_RADIUS);
+
+void odometryTask() {
+    std::cout << "Odometry thread: " << vex::this_thread::get_id() << std::endl;
+
+    while (true) {
+        odometry.update(leftMotorGroup.averagePosition(), rightMotorGroup.averagePosition(), inertialSensor.heading());
+        sleep(10);
+    }
+};
+
+void autonomous() {
+    inertialSensor.calibrate();
+
+    vex::thread odometryThread(odometryTask);
+
+    pidController.drive(1000, 100, 5000);
+};
 
 // Driver Control
 void clampTask() {
@@ -54,7 +71,7 @@ void clampTask() {
     bool clampIsActive = false;
     clamp.close();
 
-    std::cout << "Clamp task: " << vex::this_thread::get_id() << std::endl;
+    std::cout << "Clamp thread: " << vex::this_thread::get_id() << std::endl;
 
     while (true) {
         if (controller.ButtonB()) {
@@ -101,32 +118,15 @@ void drivercontrol() {
     };
 };
 
-// Autonomous
-void odometryTask() {
-    std::cout << "Odometry task: " << vex::this_thread::get_id() << std::endl;
-
-    while (true) {
-        odometry.update(leftMotorGroup.averagePosition(), rightMotorGroup.averagePosition(), inertialSensor.heading());
-        sleep(10);
-    }
-};
-
-void autonomous() {
-    inertialSensor.calibrate();
-
-    drivercontrol();
-};
-
+// Main
 int main() {
     if (Competition.isCompetitionSwitch()) {
         Competition.drivercontrol(drivercontrol);
         Competition.autonomous(autonomous);
+    } else {
+        // autonomous();
+        drivercontrol();
     }
 
-    // autonomous();
-    drivercontrol();
-
-    while (true) {
-        sleep(1000);
-    }
+    while (true) sleep(5000);
 }

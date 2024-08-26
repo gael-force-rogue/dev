@@ -30,9 +30,4 @@ public:
     /// @param rightPosition Right encoder or rotational sensor position (degrees)
     /// @param theta The imu.heading() reading (degrees)
     void update(float leftPosition, float rightPosition, float theta);
-
-    inline void display(vex::brain &brain) {
-        brain.Screen.clearScreen();
-        brain.Screen.print("X: %f, Y: %f, Theta: %f", x, y, theta);
-    };
 };
