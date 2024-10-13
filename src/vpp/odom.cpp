@@ -1,4 +1,6 @@
-#include "odom.h"
+#include "vpp/pid.h"
+#include "vpp/odom.h"
+#include <math.h>
 
 void Odometry::update(float leftPosition, float rightPosition, float theta) {
     // Convert parameter to radians and then to inches & calculate deltas
@@ -10,10 +12,10 @@ void Odometry::update(float leftPosition, float rightPosition, float theta) {
     previousRightPosition = rightPosition;
 
     // Orientation (IMU or Arc)
-    float deltaTheta = theta - this->theta;
+    float deltaTheta = theta - pose.theta;
 
     // Calculate local translation vector
-    float localX = 0, localY;
+    float localX = 0, localY = 0;
     if (deltaTheta == 0) {
         localY = (deltaLeftPosition + deltaRightPosition) / 2;
     } else {
@@ -25,22 +27,22 @@ void Odometry::update(float leftPosition, float rightPosition, float theta) {
 
     // Rotate local translation vector by (startingTheta + deltaTheta / 2)
     // Convert to polar, rotate, convert back to cartesian
-    float localPolarRadius, localPolarAngle;
+    float localPolarRadius = 0, localPolarAngle = 0;
     if (localX == 0 && localY == 0) {
         localPolarRadius = 0;
         localPolarAngle = 0;
     } else {
-        float localPolarRadius = sqrt(localX * localX + localY * localY);
-        float localPolarAngle = atan2(localY, localX);
+        localPolarRadius = sqrt((localX * localX) + (localY * localY));
+        localPolarAngle = atan2(localY, localX);
     }
 
-    float globalPolarAngle = localPolarAngle - this->theta - (deltaTheta / 2);
+    float globalPolarAngle = localPolarAngle - this->pose.theta - (deltaTheta / 2);
 
     float globalCartesianX = localPolarRadius * cos(globalPolarAngle);
     float globalCartesianY = localPolarRadius * sin(globalPolarAngle);
 
     // Update global position
-    x += globalCartesianX;
-    y += globalCartesianY;
-    this->theta = theta;
+    pose.x += globalCartesianX;
+    pose.y += globalCartesianY;
+    pose.theta = theta;
 };

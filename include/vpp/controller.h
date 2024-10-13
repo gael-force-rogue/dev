@@ -3,6 +3,12 @@
 #include "vex.h"
 #include <string>
 
+// mult line while loop bocker
+#define CONTROLLER_BINDING(controller, binding) \
+    while (controller.Button##binding()) {      \
+        vex::this_thread::sleep_for(20);        \
+    }
+
 namespace vpp {
     class Controller {
     private:

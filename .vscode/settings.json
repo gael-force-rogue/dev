@@ -61,5 +61,6 @@
         "utility": "cpp",
         "typeinfo": "cpp"
     },
-    "C_Cpp.intelliSenseEngineFallback": "disabled"
+    "C_Cpp.intelliSenseEngineFallback": "disabled",
+    "makefile.configureOnOpen": true
 }

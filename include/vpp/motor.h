@@ -2,8 +2,14 @@
 
 #include <memory>
 #include <vector>
+#include <cmath>
 
 #include "vex.h"
+
+#define FOR_MOTORS(code)         \
+    for (auto &motor : motors) { \
+        motor.get().code;        \
+    }
 
 namespace vpp {
     /// @brief Represents the different motor cartridges available for motors.
@@ -28,15 +34,17 @@ namespace vpp {
 
     public:
         /// @brief Creates a Motor
-        /// @param port Which brain port the motor is connected to
+        /// @param port Which brain port the motor is connected to, negative for reversed
         /// @param motorCartridgeType The cartridge type of the motor
-        /// @param reverse Whether the motor is reversed or not
-        Motor(int32_t port, MotorCartridgeType motorCartridgeType, bool reverse = false) : motor(vex::motor(port, static_cast<vex::gearSetting>(motorCartridgeType), reverse)) {};
+        Motor(int port) : motor(abs(port), port < 0) {
+            std::cout << "Motor created on port " << port << " and was ";
+            std::cout << (port < 0 ? "reversed" : "not reversed") << std::endl;
+        };
 
-        /// @brief Creates a Motor with a blue 6:1 cartridge
-        /// @param port Which brain port the motor is connected to
-        /// @param reverse Whether the motor is reversed or not
-        Motor(int32_t port, bool reverse = false) : motor(vex::motor(port, vex::gearSetting::ratio6_1, reverse)) {};
+        // /// @brief Creates a Motor with a blue 6:1 cartridge
+        // /// @param port Which brain port the motor is connected to
+        // /// @param reverse Whether the motor is reversed or not
+        // Motor(int port, bool reverse = false) : motor(vex::motor(port, vex::gearSetting::ratio6_1, reverse)) {};
 
         /// @brief Spins the motor.
         /// @param velocity The velocity to spin the motor at ranging from -100 to 100
@@ -57,7 +65,7 @@ namespace vpp {
 
         /// @brief Sets the defualt stop mode of the motor
         /// @param mode
-        inline void setStopMode(MotorStopMode mode) {
+        inline void setDefaultStopMode(MotorStopMode mode) {
             motor.setStopping(static_cast<vex::brakeType>(mode));
         };
 
@@ -70,6 +78,12 @@ namespace vpp {
         /// @brief Resets the position of the motor
         inline void resetPosition() {
             motor.resetPosition();
+        };
+
+        /// @brief Returns the current velocity of the motor
+        /// @return
+        inline float velocity() {
+            return motor.velocity(vex::velocityUnits::pct);
         };
     };
 
@@ -84,32 +98,24 @@ namespace vpp {
         /// @brief Spins all motors
         /// @param velocity velocity (-100 to 100)
         inline void spin(float velocity) {
-            for (auto &motor : motors) {
-                motor.get().spin(velocity);
-            }
+            FOR_MOTORS(spin(velocity));
         }
 
         /// @brief Stops all motors
         /// @param type stop mode
         inline void stop(MotorStopMode mode) {
-            for (auto &motor : motors) {
-                motor.get().stop(mode);
-            }
+            FOR_MOTORS(stop(mode));
         }
 
         /// @brief Stops all motors with the default stop mode
         inline void stop() {
-            for (auto &motor : motors) {
-                motor.get().stop();
-            }
+            FOR_MOTORS(stop());
         }
 
         /// @brief Sets the default stop mode of the motor group
         /// @param mode
-        inline void setStopMode(MotorStopMode mode) {
-            for (auto &motor : motors) {
-                motor.get().setStopMode(mode);
-            }
+        inline void setDefaultStopMode(MotorStopMode mode) {
+            FOR_MOTORS(setDefaultStopMode(mode));
         };
 
         /// @brief Returns the average position of all motors in the group
@@ -124,9 +130,7 @@ namespace vpp {
 
         /// @brief Resets the position of all motors in the group
         inline void resetPosition() {
-            for (auto &motor : motors) {
-                motor.get().resetPosition();
-            }
+            FOR_MOTORS(resetPosition());
         }
     };
 };  // namespace vpp

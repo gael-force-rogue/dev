@@ -1,26 +1,29 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Devices & Robot
-#define MOTOR_LEFT_1 PORT7, BLUE_6, true
-#define MOTOR_LEFT_2 PORT8, BLUE_6, false
-#define MOTOR_LEFT_3 PORT3, BLUE_6, true
-#define MOTOR_RIGHT_1 PORT10, BLUE_6, false
-#define MOTOR_RIGHT_2 PORT12, BLUE_6, true
-#define MOTOR_RIGHT_3 PORT11, BLUE_6, false
+// Devices
+// #define MOTOR_LEFT_1 -2, BLUE_6
+// #define MOTOR_LEFT_2 6, BLUE_6
+// #define MOTOR_LEFT_3 8, BLUE_6
+// #define MOTOR_RIGHT_1 9, BLUE_6
+// #define MOTOR_RIGHT_2 11, BLUE_6
+// #define MOTOR_RIGHT_3 -15, BLUE_6
 
-#define INERTIAL_SENSOR PORT1
-#define MOTOR_INTAKE PORT6, BLUE_6, true
+#define MOTOR_LEFT_1 -2
+#define MOTOR_LEFT_2 8
+#define MOTOR_LEFT_3 -6
+#define MOTOR_RIGHT_1 9
+#define MOTOR_RIGHT_2 -15
+#define MOTOR_RIGHT_3 11
 
-#define MOTOR_LIFT_1 PORT13, BLUE_6, true
-#define MOTOR_LIFT_2 PORT20, BLUE_6, false
+#define MOTOR_INTAKE -16
+#define MOTOR_LIFT 1
+#define DISTANCE_SENSOR 5
+
+#define INERTIAL_SENSOR 12
 
 // Odometry
 #define WHEEL_RADIUS 3.25
-
-#define LEFT_ENCODER PORT1
-#define RIGHT_ENCODER PORT2
-#define SIDEWAYS_ENCODER PORT6
 
 #define LEFT_TRACKER_OFFSET 5.125
 #define RIGHT_TRACKER_OFFSET 5
