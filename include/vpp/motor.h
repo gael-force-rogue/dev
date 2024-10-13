@@ -37,7 +37,7 @@ namespace vpp {
         /// @param port Which brain port the motor is connected to, negative for reversed
         /// @param motorCartridgeType The cartridge type of the motor
         Motor(int port) : motor(abs(port), port < 0) {
-            std::cout << "Motor created on port " << port << " and was ";
+            std::cout << "Motor (" << port << ") created on port " << abs(port) << " and was ";
             std::cout << (port < 0 ? "reversed" : "not reversed") << std::endl;
         };
 
