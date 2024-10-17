@@ -15,7 +15,11 @@ namespace vpp {
         vex::controller controller;
 
     public:
-        Controller() {};
+        vex::controller::lcd screen;
+
+        Controller() : controller(vex::controllerType::primary) {
+            this->screen = controller.Screen;
+        };
 
         // Axis Position
         inline float leftY() { return controller.Axis3.position(); };

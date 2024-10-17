@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "vex.h"
+#include <iostream>
 
 #define FOR_MOTORS(code)         \
     for (auto &motor : motors) { \
@@ -34,12 +35,8 @@ namespace vpp {
 
     public:
         /// @brief Creates a Motor
-        /// @param port Which brain port the motor is connected to, negative for reversed
-        /// @param motorCartridgeType The cartridge type of the motor
-        Motor(int port) : motor(abs(port), port < 0) {
-            std::cout << "Motor (" << port << ") created on port " << abs(port) << " and was ";
-            std::cout << (port < 0 ? "reversed" : "not reversed") << std::endl;
-        };
+        /// @param motor vex::motor
+        Motor(vex::motor motor) : motor(motor) {};
 
         // /// @brief Creates a Motor with a blue 6:1 cartridge
         // /// @param port Which brain port the motor is connected to

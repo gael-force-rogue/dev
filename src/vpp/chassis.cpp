@@ -1,49 +1,55 @@
 #include "vpp/chassis.h"
+#include "pid.h"
 
-void vpp::Chassis::moveToPoint(Pose target, float maxSpeed, float timeout) {
-    PIDAlgorithm algorithm(config.drive, timeout);
-    PIDAlgorithm headingAlgorithm(config.heading, timeout);
+#include <iostream>
 
-    std::cout << "Moving from: (" << odometry.pose.x << ", " << odometry.pose.y << ")" << "\n";
-    std::cout << "to: (" << target.x << ", " << target.y << ")" << "\n";
-    std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
+// void vpp::Chassis::moveToPoint(Pose target, float maxSpeed, float timeout) {
+//     PIDAlgorithm algorithm(config.drive, timeout);
+//     PIDAlgorithm headingAlgorithm(config.heading, timeout);
 
-    do {
-        float lateralError = odometry.pose.distance(target);
-        float angularError = odometry.pose.angle(target);
+//     std::cout << "Moving from: (" << odometry.pose.x << ", " << odometry.pose.y << ")" << "\n";
+//     std::cout << "to: (" << target.x << ", " << target.y << ")" << "\n";
+//     std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
 
-        float lateralMotorPower = algorithm.update(lateralError);
-        float angularMotorPower = headingAlgorithm.update(angularError);
+//     do {
+//         float lateralError = odometry.pose.distance(target);
+//         float angularError = odometry.pose.angle(target);
 
-        std::cout << "Angular Error: " << angularError << std::endl;
-        std::cout << "Angular Motor Power: " << angularMotorPower << std::endl;
+//         std::cout << "Angular Error: " << angularError << std::endl;
 
-        arcade(lateralMotorPower, angularMotorPower, maxSpeed);
+//         float lateralMotorPower = algorithm.update(lateralError);
+//         float angularMotorPower = headingAlgorithm.update(angularError);
 
-        sleep(20);
-    } while (algorithm.shouldContinue());
+//         arcade(lateralMotorPower, angularMotorPower, maxSpeed);
 
-    std::cout << "Done" << std::endl;
-};
+//         sleep(20);
+//     } while (algorithm.shouldContinue());
 
-void vpp::Chassis::turnToPoint(Pose target, float maxSpeed, float timeout) {
-    PIDAlgorithm algorithm(config.turn, timeout);
+//     arcade(0, 0);
 
-    std::cout << "Turning from: " << odometry.pose.theta << "\n";
-    std::cout << "to: " << target.theta << "\n";
-    std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
+//     std::cout << "Done" << std::endl;
+// };
 
-    do {
-        float error = odometry.pose.angle(target);
-        float motorPower = algorithm.update(error);
+// void vpp::Chassis::turnToPoint(Pose target, float maxSpeed, float timeout) {
+//     PIDAlgorithm algorithm(config.turn, timeout);
 
-        std::cout << "Error: " << error << std::endl;
-        std::cout << "Motor Power: " << motorPower << std::endl;
+//     std::cout << "Turning from: " << odometry.pose.theta << "\n";
+//     std::cout << "to: " << target.theta << "\n";
+//     std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
 
-        arcade(0, motorPower, maxSpeed);
+//     do {
+//         // float error = odometry.pose.angle(target);
+//         float error = target.theta - odometry.pose.theta;
+//         float motorPower = algorithm.update(error);
 
-        sleep(20);
-    } while (algorithm.shouldContinue());
+//         std::cout << "Error: " << error << std::endl;
 
-    std::cout << "Done" << std::endl;
-};
+//         arcade(0, motorPower, maxSpeed);
+
+//         sleep(20);
+//     } while (algorithm.shouldContinue());
+
+//     arcade(0, 0);
+
+//     std::cout << "Done" << std::endl;
+// };

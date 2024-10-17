@@ -5,9 +5,19 @@ namespace vpp {
     class Pneumatic {
     private:
         vex::pneumatics pneumatic;
+        bool isDeployed = false;
 
     public:
         Pneumatic(vex::triport::port port) : pneumatic(vex::pneumatics(port)) {};
+
+        inline void toggle() {
+            if (isDeployed) {
+                close();
+            } else {
+                open();
+            }
+            isDeployed = !isDeployed;
+        }
 
         inline float value() {
             return pneumatic.value();

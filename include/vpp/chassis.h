@@ -3,7 +3,6 @@
 #include "vex.h"
 #include "vpp/motor.h"
 #include "vpp/odom.h"
-#include "vpp/pid.h"
 #include "helpers.h"
 #include "config.h"
 #include <algorithm>
@@ -14,22 +13,14 @@ namespace vpp {
     public:
         MotorGroup &leftGroup;
         MotorGroup &rightGroup;
-        Odometry &odometry;
-
-        PIDControllerConfig config{
-            {DRIVE_PID_kP, DRIVE_PID_kI, DRIVE_PID_kD, DRIVE_PID_ACCURACY},
-            {HEADING_PID_kP, HEADING_PID_kI, HEADING_PID_kD, HEADING_PID_ACCURACY},
-            {TURN_PID_kP, TURN_PID_kI, TURN_PID_kD, TURN_PID_ACCURACY},
-            {SWING_PID_kP, SWING_PID_kI, SWING_PID_kD, SWING_PID_ACCURACY},
-        };
 
         /**
          * @brief Constructs a new Chassis object
          * @param left Left motor group
          * @param right Right motor group
          */
-        Chassis(MotorGroup &left, MotorGroup &right, Odometry &odometry)
-            : leftGroup(left), rightGroup(right), odometry(odometry) {};
+        Chassis(MotorGroup &left, MotorGroup &right)
+            : leftGroup(left), rightGroup(right) {};
 
         /**
          * @brief Drives with arcade controls
@@ -79,7 +70,7 @@ namespace vpp {
          * @param maxSpeed Maximum speed
          * @param timeout Timeout in milliseconds
          */
-        void moveToPoint(Pose target, float maxSpeed, float timeout);
+        // void moveToPoint(Pose target, float maxSpeed, float timeout);
 
         /**
          * @brief Turns to a point
@@ -87,6 +78,6 @@ namespace vpp {
          * @param maxSpeed Maximum speed
          * @param timeout Timeout in milliseconds
          */
-        void turnToPoint(Pose target, float maxSpeed, float timeout);
+        // void turnToPoint(Pose target, float maxSpeed, float timeout);
     };
 };  // namespace vpp
