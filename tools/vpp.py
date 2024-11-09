@@ -1,8 +1,12 @@
 import os
 import subprocess
 
+
 if not os.path.exists('vpp'):
-    root = '..'
+    if os.path.exists('vex'):
+        root = '.'
+    else:
+        root = '..'
 else:
     root = '.'
 
@@ -39,20 +43,20 @@ def combineLikeFiles(files: list):
 def vppFiles(path: str):
     try:
         return list(filter(
-            lambda x: x.endswith('.h'),
+            lambda x: x.endswith('.h') or x.endswith('.cpp'),
             subprocess.check_output(f'find {path} | grep vpp', shell=True).decode('utf-8').strip('\n').split('\n')
         ))
     except subprocess.CalledProcessError as e:
         return ''
 
-headerFiles = vppFiles(f'{root}/src/include')
-sourceFiles = vppFiles(f'{root}/src/src')
+headerFiles = vppFiles(f'{root}/include')
+sourceFiles = vppFiles(f'{root}/src')
 
-with open(f'{root}/vpp/output/vpp.h', 'w') as f:
+with open(f'{root}/tools/vpp.h', 'w') as f:
     f.write(combineLikeFiles(headerFiles))
 
 if sourceFiles:
-    with open(f'{root}/vpp/outputvpp.cpp', 'w') as f:
+    with open(f'{root}/tools/vpp.cpp', 'w') as f:
         f.write(combineLikeFiles(sourceFiles))
 
-os.system(f'clang-format -style=file:{root}/src/.clang-format -i {root}/vpp/output/vpp.h')
+os.system(f'clang-format -style=file:{root}/.clang-format -i {root}/tools/vpp.h')

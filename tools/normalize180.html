@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heading Visualizer</title>
+</head>
+<body>
+    <label for="absolute-starting">
+        Absolute Starting Angle:
+        <span id="absolute-starting-display"></span>
+        <input type="range" min="-180" max="180" value="0" id="absolute-starting" style="width: 50vw">
+    </label>
+    <br>
+     <label for="Absolute Heading">
+        Absolute Heading:
+        <span id="absolute-heading-display"></span>
+        <input type="range" min="-1000" max="1000" value="0" id="absolute-heading" style="width: 75vw">
+     </label>
+    <br>
+    <label for="absolute-target">
+        Target:
+        <input type="number" id="absolute-target" />
+    </label>
+    <br>
+    <label for="turnBy">
+        Turn By:
+        <output id="turnBy"></output> 
+    </label>
+    <!-- Robot -->
+    <div style="width: 40px; height: 60px; margin-left: 50px; margin-top: 50px; background-color: black" id="robot">
+        <div style="width: 40px; height: 10px; background-color: red;"></div>
+    </div>
+    <script>
+        const absoluteHeading = document.getElementById('absolute-heading');
+        const absoluteStarting = document.getElementById('absolute-starting');
+        const absoluteTarget = document.getElementById('absolute-target');
+        const turnBy = document.getElementById('turnBy');
+        const robot = document.getElementById('robot');
+        const absoluteHeadingDisplay = document.getElementById('absolute-heading-display');
+        const absoluteStartingDisplay = document.getElementById('absolute-starting-display');
+
+        function normalize180(angle) {
+            while (angle < -180) {
+                angle += 360;
+            }
+            while (angle >= 180) {
+                angle -= 360;
+            }
+            return angle;
+        };
+
+        function update() {
+            absoluteHeadingDisplay.innerText = absoluteHeading.value;
+            absoluteStartingDisplay.innerText = absoluteStarting.value;
+            turnBy.value = normalize180(absoluteTarget.value - absoluteHeading.value);
+            robot.style.transform = `rotate(${absoluteHeading.value}deg)`;
+        };
+
+        absoluteHeading.addEventListener('input', update);
+        absoluteTarget.addEventListener('input', update);
+        absoluteStarting.addEventListener('input', update); 
+        update();
+    </script>
+</body>
+</html>

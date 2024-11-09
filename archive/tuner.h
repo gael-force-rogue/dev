@@ -16,9 +16,10 @@ enum ConfigTunerAction {
 };
 
 class ConfigTuner {
-   public:
+private:
     controller Controller;
 
+public:
     float lastIndex;
     int currentIndex = 0;
     std::vector<std::string> keys;

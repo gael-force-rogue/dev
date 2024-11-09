@@ -43,6 +43,7 @@ namespace vpp {
         inline bool ButtonR1() { return controller.ButtonR1.pressing(); };
         inline bool ButtonR2() { return controller.ButtonR2.pressing(); };
 
+        // Rumble
         inline void vibrate(const char *str) { controller.rumble(str); };
         inline void vibrate(const std::string str) { controller.rumble(str.c_str()); };
 

@@ -9,19 +9,17 @@
 
 #include <iostream>
 
-#include "vex.h"
 #include "vpp.h"
-#include "pid.h"
-#include "vpp/tuner.h"
-
+#include "vpp/helpers.h"
+#include "devices.h"
+#include "autons.h"
 #include "config.h"
 
 using namespace vpp;
 
-// Devices
 vex::competition Competition;
 vex::brain Brain;
-Controller controller;
+Controller mainController;
 
 Motor left1(MOTOR_LEFT_1);
 Motor left2(MOTOR_LEFT_2);
@@ -33,129 +31,69 @@ Motor right3(MOTOR_RIGHT_3);
 MotorGroup leftMotorGroup({left1, left2, left3});
 MotorGroup rightMotorGroup({right1, right2, right3});
 
-Motor lift(MOTOR_LIFT);
-Motor intake(MOTOR_INTAKE);
-vex::inertial inertialSensor(INERTIAL_SENSOR);
+vex::optical colorSensor(PORT2);
+Intake intake = Intake(MOTOR_INTAKE).withColorSorting(colorSensor, BLUE);
+Lift lift(MOTOR_LIFT, -15, intake);
+IMU imu(INERTIAL_SENSOR);
 
-vex::pneumatics clamp(Brain.ThreeWirePort.H);
-vex::pneumatics hang(Brain.ThreeWirePort.B);
-vex::pneumatics knocker(Brain.ThreeWirePort.A);
+Pneumatic clamp(Brain.ThreeWirePort.H);
+Pneumatic hang(Brain.ThreeWirePort.B);
+Pneumatic knocker(Brain.ThreeWirePort.A);
 
-// Odometry odometry(LEFT_TRACKER_OFFSET, RIGHT_TRACKER_OFFSET, WHEEL_RADIUS);
-Chassis chassis(leftMotorGroup, rightMotorGroup);
-PIDController pidController(chassis, inertialSensor);
+Odometry odometry = Odometry(6.25, 3);
+TankChassis &chassis = TankChassis(leftMotorGroup, rightMotorGroup, imu)
+                           .withDriveConstants(2, 0, 3, 100, 1000, 1, 200, 3)
+                           .withHeadingConstants(2, 0, 3, 100, 1000, 1, 200, 3)
+                           .withTurnConstants(2, 0, 3, 100, 1000, 1, 200, 3)
+                           .withOdometry(odometry);
 
-// Threads
-void motorThreadF() {
-    std::cout << "Motor thread: " << vex::this_thread::get_id() << std::endl;
-
-    intake.setDefaultStopMode(vpp::MotorStopMode::COAST);
-
-    while (true) {
-        if (controller.ButtonR1()) {
-            intake.spin(100);
-        } else if (controller.ButtonR2()) {
-            intake.spin(-100);
-        } else {
-            intake.stop();
-        }
-
-        if (controller.ButtonL1()) {
-            lift.spin(100);
-        } else if (controller.ButtonL2()) {
-            lift.spin(-100);
-        } else {
-            lift.stop();
-        }
-
-        sleep(20);
-    }
+void intakeThreadF() {
+    intake.searchForEnemyRings();
 };
 
 void pistonThreadF() {
     std::cout << "Piston thread: " << vex::this_thread::get_id() << std::endl;
 
-    bool hangIsOpen = true;
-    bool knockerIsOpen = false;
-
     while (true) {
-        BUTTON_PRESS(controller.ButtonA(), clamp.open(), 20);
-        BUTTON_PRESS(controller.ButtonB(), clamp.close(), 20);
-        if (controller.ButtonY()) {
-            if (knockerIsOpen) {
-                knocker.close();
-            } else {
-                knocker.open();
-            }
-            knockerIsOpen = !knockerIsOpen;
-            while (controller.ButtonY()) {
-                sleep(20);
-            }
-        }
-        if (controller.ButtonUp()) {
-            if (hangIsOpen) {
-                hang.close();
-            } else {
-                hang.open();
-            }
-            hangIsOpen = !hangIsOpen;
-            while (controller.ButtonUp()) {
-                sleep(20);
-            }
-        }
+        IF_BUTTON_PRESS(mainController.ButtonA(), clamp.open(), 20);
+        IF_BUTTON_PRESS(mainController.ButtonB(), clamp.close(), 20);
+        IF_BUTTON_PRESS(mainController.ButtonY(), knocker.toggle(), 20);
+        IF_BUTTON_PRESS(mainController.ButtonUp(), hang.toggle(), 20);
 
         sleep(20);
     }
 };
 
-void imuThreadF() {
-    while (true) {
-        Brain.Screen.clearScreen();
-        Brain.Screen.setCursor(1, 1);
-        Brain.Screen.print("Heading: %f", inertialSensor.heading());
-
-        vpp::sleep(50);
-    }
-}
-
-// Driver & Autonomous
-void autonomous() {
-    chassis.leftGroup.setDefaultStopMode(BRAKE);
-    chassis.rightGroup.setDefaultStopMode(BRAKE);
-
-    // 600 = 2.5 tiles
-    // 600/5 = 0.5 tiles
-    // 120 = 0.5 tiles
-    // 240 = 1 tile
-
-    // 1 Tile
-    // pidController.drive(370, 50, 5000, 2);
-    pidController.turn(5, 70, 10000, 50);
-};
-
 void drivercontrol() {
-    std::cout << "Driver Control: " << vex::this_thread::get_id() << std::endl;
-
-    vex::thread motorThread(motorThreadF);
     vex::thread pistonThread(pistonThreadF);
+    vex::thread intakeThread(intakeThreadF);
 
     chassis.setDefaultStopMode(COAST);
+    intake.setDefaultStopMode(HOLD);
+    lift.setDefaultStopMode(HOLD);
+
     while (true) {
-        float y = controller.leftY();
-        float x = controller.rightX();
+        float y = mainController.leftY();
+        float x = mainController.rightX();
 
         chassis.arcade(y, x * 0.3);
+
+        intake.handleDrivercontrol(mainController.ButtonR1(), mainController.ButtonR2());
+        lift.handleDrivercontrol(mainController.ButtonL1(), mainController.ButtonL2());
 
         sleep(20);
     };
 };
 
+void autonomous() {
+    imu.calibrate();
+    chassis.odometry.resetPose();
+    vex::thread intakeThread(intakeThreadF);
+
+    red_solo_awp();
+};
+
 int main() {
-    std::cout << "Main thread: " << vex::this_thread::get_id() << std::endl;
-
-    // vex::thread tunerThread(tunerThreadF);
-    vex::thread imuThread(imuThreadF);
-
     if (Competition.isCompetitionSwitch()) {
         Competition.drivercontrol(drivercontrol);
         Competition.autonomous(autonomous);

@@ -12,6 +12,8 @@
         motor.get().code;        \
     }
 
+using namespace vex;
+
 namespace vpp {
     /// @brief Represents the different motor cartridges available for motors.
     /// @ref vex::gearSetting
@@ -36,12 +38,11 @@ namespace vpp {
     public:
         /// @brief Creates a Motor
         /// @param motor vex::motor
-        Motor(vex::motor motor) : motor(motor) {};
+        Motor(int port) : motor(port) {};
 
-        // /// @brief Creates a Motor with a blue 6:1 cartridge
-        // /// @param port Which brain port the motor is connected to
-        // /// @param reverse Whether the motor is reversed or not
-        // Motor(int port, bool reverse = false) : motor(vex::motor(port, vex::gearSetting::ratio6_1, reverse)) {};
+        /// @brief Creates a Motor
+        /// @param port e.g. vex::PORT1, true
+        Motor(int port, bool reverse) : motor(port, reverse) {};
 
         /// @brief Spins the motor.
         /// @param velocity The velocity to spin the motor at ranging from -100 to 100
@@ -52,7 +53,7 @@ namespace vpp {
         /// @brief Stops the motor
         /// @param type The stop mode to use
         inline void stop(MotorStopMode type) {
-            motor.stop(static_cast<vex::brakeType>(type));
+            motor.stop(static_cast<brakeType>(type));
         };
 
         /// @brief Stops the motor with the default stop mode
@@ -63,13 +64,17 @@ namespace vpp {
         /// @brief Sets the defualt stop mode of the motor
         /// @param mode
         inline void setDefaultStopMode(MotorStopMode mode) {
-            motor.setStopping(static_cast<vex::brakeType>(mode));
+            motor.setStopping(static_cast<brakeType>(mode));
         };
 
         /// @brief Returns the current position of the motor in degrees (not clamped)
         /// @return
         inline float position() {
-            return motor.position(vex::rotationUnits::deg);
+            return motor.position(deg);
+        };
+
+        inline void spinToPosition(float position, bool waitForCompletion) {
+            motor.spinToPosition(position, deg, waitForCompletion);
         };
 
         /// @brief Resets the position of the motor
@@ -78,9 +83,9 @@ namespace vpp {
         };
 
         /// @brief Returns the current velocity of the motor
-        /// @return
+        /// @return Current velocity in percentage
         inline float velocity() {
-            return motor.velocity(vex::velocityUnits::pct);
+            return motor.velocity(pct);
         };
     };
 

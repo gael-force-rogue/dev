@@ -1,55 +1,118 @@
 #include "vpp/chassis.h"
-#include "pid.h"
+#include "vpp/algorithms/pid.h"
 
 #include <iostream>
 
-// void vpp::Chassis::moveToPoint(Pose target, float maxSpeed, float timeout) {
-//     PIDAlgorithm algorithm(config.drive, timeout);
-//     PIDAlgorithm headingAlgorithm(config.heading, timeout);
+using namespace vpp;
 
-//     std::cout << "Moving from: (" << odometry.pose.x << ", " << odometry.pose.y << ")" << "\n";
-//     std::cout << "to: (" << target.x << ", " << target.y << ")" << "\n";
-//     std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
+void TankChassis::resetToInitialConstants() {
+    this->driveConstants = this->defaultDriveConstants;
+    this->headingConstants = this->defaultHeadingConstants;
+    this->turnConstants = this->defaultTurnConstants;
+    this->swingConstants = this->defaultSwingConstants;
+};
 
-//     do {
-//         float lateralError = odometry.pose.distance(target);
-//         float angularError = odometry.pose.angle(target);
+void TankChassis::driveDistance(float distance, bool followThrough) {
+    PIDAlgorithm driveAlgorithm(this->driveConstants);
+    PIDAlgorithm headingAlgorithm(this->headingConstants);
 
-//         std::cout << "Angular Error: " << angularError << std::endl;
+    const float startingHeading = imu.heading();
+    const float startingPosition = (leftGroup.averagePosition() + rightGroup.averagePosition()) / 2;
 
-//         float lateralMotorPower = algorithm.update(lateralError);
-//         float angularMotorPower = headingAlgorithm.update(angularError);
+    while (!driveAlgorithm.isSettled()) {
+        float lateralError = distance + startingPosition - ((leftGroup.averagePosition() + rightGroup.averagePosition()) / 2);
+        float angularError = startingHeading - imu.heading();
 
-//         arcade(lateralMotorPower, angularMotorPower, maxSpeed);
+        float lateralPower = driveAlgorithm.update(lateralError);
+        float angularPower = headingAlgorithm.update(angularError);
 
-//         sleep(20);
-//     } while (algorithm.shouldContinue());
+        arcade(lateralPower, angularPower);
 
-//     arcade(0, 0);
+        sleep(10);
+    };
 
-//     std::cout << "Done" << std::endl;
-// };
+    if (!followThrough) {
+        stop(HOLD);
+    }
+};
 
-// void vpp::Chassis::turnToPoint(Pose target, float maxSpeed, float timeout) {
-//     PIDAlgorithm algorithm(config.turn, timeout);
+void TankChassis::driveDistance(float distance, float maxSpeed, bool followThrough) {
+    this->driveConstants.maxSpeed = maxSpeed;
+    driveDistance(distance, followThrough);
+    resetToInitialConstants();
+};
 
-//     std::cout << "Turning from: " << odometry.pose.theta << "\n";
-//     std::cout << "to: " << target.theta << "\n";
-//     std::cout << "in: " << algorithm.timeout / 1000 << " seconds" << std::endl;
+void TankChassis::turnToAngle(float angle, bool followThrough) {
+    PIDAlgorithm turnAlgorithm(this->turnConstants);
 
-//     do {
-//         // float error = odometry.pose.angle(target);
-//         float error = target.theta - odometry.pose.theta;
-//         float motorPower = algorithm.update(error);
+    angle = normalize180(angle);
 
-//         std::cout << "Error: " << error << std::endl;
+    while (!turnAlgorithm.isSettled()) {
+        float error = angle - imu.heading();
+        float power = turnAlgorithm.update(error);
 
-//         arcade(0, motorPower, maxSpeed);
+        arcade(0, power);
 
-//         sleep(20);
-//     } while (algorithm.shouldContinue());
+        sleep(10);
+    };
 
-//     arcade(0, 0);
+    if (!followThrough) {
+        stop(HOLD);
+    }
+};
 
-//     std::cout << "Done" << std::endl;
-// };
+void TankChassis::turnToAngle(float angle, float maxSpeed, bool followThrough) {
+    this->turnConstants.maxSpeed = maxSpeed;
+    turnToAngle(angle, followThrough);
+    resetToInitialConstants();
+};
+
+void TankChassis::leftSwingToAngle(float angle, bool followThrough) {
+    PIDAlgorithm swingAlgorithm(this->swingConstants);
+
+    angle = normalize180(angle);
+
+    while (!swingAlgorithm.isSettled()) {
+        float error = angle - imu.heading();
+        float power = swingAlgorithm.update(error);
+
+        tank(0, power);
+
+        sleep(10);
+    };
+
+    if (!followThrough) {
+        stop(HOLD);
+    }
+};
+
+void TankChassis::leftSwingToAngle(float angle, float maxSpeed, bool followThrough) {
+    this->swingConstants.maxSpeed = maxSpeed;
+    leftSwingToAngle(angle, followThrough);
+    resetToInitialConstants();
+};
+
+void TankChassis::rightSwingToAngle(float angle, bool followThrough) {
+    PIDAlgorithm swingAlgorithm(this->swingConstants);
+
+    angle = normalize180(angle);
+
+    while (!swingAlgorithm.isSettled()) {
+        float error = angle - imu.heading();
+        float power = swingAlgorithm.update(error);
+
+        tank(power, 0);
+
+        sleep(10);
+    };
+
+    if (!followThrough) {
+        stop(HOLD);
+    }
+};
+
+void TankChassis::rightSwingToAngle(float angle, float maxSpeed, bool followThrough) {
+    this->swingConstants.maxSpeed = maxSpeed;
+    rightSwingToAngle(angle, followThrough);
+    resetToInitialConstants();
+};

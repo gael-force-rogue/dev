@@ -1,20 +1,23 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "vex.h"
+
+using namespace vex;
+
 // Devices
-#define TEST parseMotorPort(-2)
-#define MOTOR_LEFT_1 vex::motor(vex::PORT2, true)
-#define MOTOR_LEFT_2 vex::motor(vex::PORT8, false)
-#define MOTOR_LEFT_3 vex::motor(vex::PORT6, true)
-#define MOTOR_RIGHT_1 vex::motor(vex::PORT9, false)
-#define MOTOR_RIGHT_2 vex::motor(vex::PORT15, true)
-#define MOTOR_RIGHT_3 vex::motor(vex::PORT11, false)
+#define MOTOR_LEFT_1 PORT2, true
+#define MOTOR_LEFT_2 PORT8, false
+#define MOTOR_LEFT_3 PORT6, true
+#define MOTOR_RIGHT_1 PORT9, false
+#define MOTOR_RIGHT_2 PORT15, true
+#define MOTOR_RIGHT_3 PORT11, false
 
-#define MOTOR_INTAKE vex::motor(vex::PORT16, true)
-#define MOTOR_LIFT vex::motor(vex::PORT7, false)
-#define DISTANCE_SENSOR vex::PORT5
+#define MOTOR_INTAKE PORT16, true
+#define MOTOR_LIFT PORT7, false
+#define DISTANCE_SENSOR PORT5
 
-#define INERTIAL_SENSOR vex::PORT12
+#define INERTIAL_SENSOR PORT12
 
 // Odometry
 #define WHEEL_RADIUS 3.25
