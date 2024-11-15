@@ -37,11 +37,13 @@ namespace vpp {
               previousMotorPower = 0,
               previousError = 0;
 
-        vex::timer safetyTimer;
+        vex::timer timeoutTimer;
+        vex::timer idleTimer;
         float timeSettled = 0;
 
         PIDAlgorithm(PIDConstants config) : config(config) {
-            safetyTimer.clear();
+            timeoutTimer.clear();
+            idleTimer.clear();
         };
 
         /// @brief Returns the calculated motor power and updates the state

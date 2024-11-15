@@ -27,23 +27,34 @@ namespace vpp {
         Pose(float x, float y, float theta) : x(x), y(y), theta(theta) {};
 
         /**
-         * @brief Get the distance between two poses
+         * @brief Get the distance to a pose
          *
          * @param B Pose B
-         * @return float Distance between the two poses
+         * @return Distance between the two poses
          */
         inline float distance(Pose B) const {
             return sqrt(pow(B.x - x, 2) + pow(B.y - y, 2));
         };
 
         /**
-         * @brief Get the angle between two poses
-         *
-         * @param B Pose B
-         * @return float Angle between the two poses
+         * @brief Calculate the distance to a point
+         * @param x X coordinate of the point
+         * @param y Y coordinate of the point
          */
-        float angle(Pose B) const {
-            return RADIANS_TO_DEGREES(atan2(B.y - y, B.x - x)) - theta;
+        inline float distance(float x, float y) const {
+            // Can also be written as: sqrt(pow(x - this->x, 2) + pow(y - this->y, 2));
+            return hypot(x - this->x, y - this->y);
+        };
+
+        /**
+         * @brief Get the angle to a point
+         *
+         * @param x X coordinate
+         * @param y Y coordinate
+         * @return float Angle to point
+         */
+        float angle(float x, float y) const {
+            return RADIANS_TO_DEGREES(atan2(y - this->y, x - this->x)) - theta;
         };
     };
 

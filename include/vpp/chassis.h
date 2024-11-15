@@ -201,5 +201,147 @@ namespace vpp {
          * @param followThrough Whether to stop after swinging (used for motion chaining)
          */
         void rightSwingToAngle(float angle, float maxSpeed, bool followThrough = false);
+
+        /**
+         * @brief Determines if the robot has crossed a line 1) perpendicular to a line going through robot and target and 2) going through the target point
+         * A center line is the line from robot to the target point
+         * @param x Target X coordinate
+         * @param y Target Y coordinate
+         * @param angle Angle of the target point
+         * @ref https://www.desmos.com/calculator/zwaytec4zg
+         */
+        inline bool hasCrossedPerpendicularLine(float x, float y, float angle) {
+            return ((y - odometry.pose.y) * cos(DEGREES_TO_RADIANS(angle)) <= -(x - odometry.pose.x) * sin(DEGREES_TO_RADIANS(angle)));
+        };
+
+        /**
+         * @brief Determines which side the robot is on relative to the center line
+         * @note A center line is the line from robot to the target point
+         */
+        inline bool hasCrossedCenterLine(float x, float y, float targetAngle) {
+            return hasCrossedPerpendicularLine(x, y, targetAngle + 90);
+        };
+
+        /**
+         * @brief Drives to a point
+         * @param x X coordinate
+         * @param y Y coordinate
+         * @param followThrough Whether to stop after driving (used for motion chaining)
+         */
+        void driveToPoint(float x, float y, bool followThrough = false) {
+            PIDAlgorithm driveAlgorithm(driveConstants);
+            PIDAlgorithm headingAlgorithm(headingConstants);
+
+            const float startingAngle = atan2(x - odometry.pose.x, y - odometry.pose.y);
+            bool crossedPerpendicularLine = false,
+                 previousCrossedPerpendicularLine = hasCrossedPerpendicularLine(x, y, startingAngle);
+
+            while (!driveAlgorithm.isSettled()) {
+                crossedPerpendicularLine = hasCrossedPerpendicularLine(x, y, startingAngle);
+                if (crossedPerpendicularLine && !previousCrossedPerpendicularLine) break;
+                previousCrossedPerpendicularLine = crossedPerpendicularLine;
+
+                float lateralError = odometry.pose.distance(x, y);
+                float headingError = odometry.pose.angle(x, y);
+
+                float headingScaleFactor = cos(DEGREES_TO_RADIANS(headingError));
+                lateralPower = driveAlgorithm.update(lateralError) * headingScaleFactor;
+                float angularPower = lateralError < driveConstants.settleError ? 0 : headingAlgorithm.update(normalize90(headingError));
+
+                lateralPower = CLAMP(lateralPower, fabs(heading_scale_factor) * driveConstants.maxSpeed);
+                // angularPower = CLAMP(angularPower, headingAlgorithm.config.maxSpeed); -> already done by PIDAlgorithm
+
+                // TODO: minimum drive speed
+                // TODO?: speed scaling
+
+                arcade(lateralPower, angularPower);
+
+                sleep(10);
+            };
+
+            if (!followThrough) {
+                stop(HOLD);
+            }
+        };
+
+        /**
+         * @brief Drives to a pose with a boomerang controller
+         * @param target A Pose object representing the target pose
+         * @param lead Lead distance
+         * @param setback Setback distance
+         * @param followThrough Whether to stop after driving (used for motion chaining)
+         */
+        void driveToPose(Pose target, float lead, float setback, bool followThrough = false) {
+            PIDAlgorithm driveAlgorithm(driveConstants);
+            PIDAlgorithm headingAlgorithm(headingConstants);
+
+            bool crossedPerpendicularLine = hasCrossedPerpendicularLine(target.x, target.y, target.theta);
+            bool previousCrossedPerpendicularLine = crossedPerpendicularLine;
+            bool crossedCenterLine = false;
+            bool centerLineSide = hasCrossedCenterLine(target.x, target.y, target.theta);
+            bool previousCenterLineSide = centerLineSide;
+
+            while (!driveAlgorithm.isSettled()) {
+                crossedPerpendicularLine = hasCrossedPerpendicularLine(X_position, Y_position, angle);
+                if (crossedPerpendicularLine && !previousCrossedPerpendicularLine) break;
+                previousCrossedPerpendicularLine = crossedPerpendicularLine;
+
+                centerLineSide = hasCrossedCenterLine(X_position, Y_position, angle);
+                if (centerLineSide != previousCenterLineSide) {
+                    crossedCenterLine = true;
+                }
+
+                float distanceToTarget = odometry.pose.distance(target);
+
+                float carrotX = x - sin(DEGREES_TO_RADIANS(angle)) * (lead * distanceToTarget + setback);
+                float carrotY = y - cos(DEGREES_TO_RADIANS(angle)) * (lead * distanceToTarget + setback);
+
+                float driveError = odometry.pose.distance(carrotX, carrotY);
+                float headingError = odometry.pose.angle(carrotX, carrotY);
+
+                if (driveError < driveConstants.settleError || crossedCenterLine || driveError < setback) {
+                    headingError = normalize180(angle) - odometry.pose.theta;
+                    driveError = distanceToTarget;
+                };
+
+                float lateralPower = driveAlgorithm.update(driveError);
+
+                float heading_scale_factor = cos(DEGREES_TO_RADIANS(headingError));
+                lateralPower *= heading_scale_factor;
+                float angularPower = headingAlgorithm.update(normalize90(headingError));
+
+                lateralPower = CLAMP(lateralPower, fabs(heading_scale_factor) * driveAlgorithm.config.maxSpeed);
+                // angularPower = CLAMP(angularPower, headingAlgorithm.config.maxSpeed); -> already done by PIDAlgorithm
+
+                // TODO: minimum drive speed
+                // TODO?: speed scaling
+
+                arcade(lateralPower, angularPower);
+
+                sleep(10);
+            };
+
+            if (!followThrough) {
+                stop(HOLD);
+            }
+        };
+
+        void turnToPoint(float x, float y, float offset, bool followThrough = false) {
+            PIDAlgorithm turnAlgorithm(turnConstants);
+            while (!turnAlgorithm.isSettled()) {
+                float error = odometry.pose.angle(x, y) + offset;
+                float output = turnAlgorithm.update(error);
+                arcade(0, output);
+                sleep(10);
+            };
+
+            if (!followThrough) {
+                stop(HOLD);
+            }
+        }
+
+        void turnToPoint(float x, float y, bool followThrough = false) {
+            turnToPoint(x, y, 0, followThrough);
+        };
     };
 };  // namespace vpp

@@ -32,7 +32,8 @@ MotorGroup leftMotorGroup({left1, left2, left3});
 MotorGroup rightMotorGroup({right1, right2, right3});
 
 vex::optical colorSensor(PORT2);
-Intake intake = Intake(MOTOR_INTAKE).withColorSorting(colorSensor, BLUE);
+Intake intake = Intake(MOTOR_INTAKE)
+                    .withColorSorting(colorSensor, BLUE);
 Lift lift(MOTOR_LIFT, -15, intake);
 IMU imu(INERTIAL_SENSOR);
 

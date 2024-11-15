@@ -20,6 +20,14 @@ namespace vpp {
     /// @param time Time to wait in milliseconds
     inline void sleep(int time) { vex::this_thread::sleep_for(time); };
 
+    /// @brief Normalizes an angle to be between -90 and 90
+    /// @param angle Angle to normalize (degrees)
+    inline float normalize90(float angle) {
+        while (angle > 90) angle -= 180;
+        while (angle < -90) angle += 180;
+        return angle;
+    };
+
     /// @brief Normalizes an angle to be between -180 and 180
     /// @param angle Angle to normalize (degrees)
     inline float normalize180(float angle) {
