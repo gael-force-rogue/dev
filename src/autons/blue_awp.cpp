@@ -1,5 +1,5 @@
 #include "autons.h"
 
-void skills() {
+void blue_awp() {
 
 };

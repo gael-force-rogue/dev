@@ -1,8 +1,10 @@
 #pragma once
 
 #include "vex.h"
+#include <cmath>
 
 #define CLAMP(expr, threshold) std::max(-threshold, std::min(expr, threshold))
+#define CLAMP_SPECIFIC(expr, mi, ma) std::max(mi, std::min(expr, ma))
 
 #define IF_BUTTON_PRESS(expression, action, sleep) \
     if (expression) {                              \
@@ -14,6 +16,8 @@
 
 #define ELSE_IF_BUTTON_PRESS(expression, action, sleep) \
     else BUTTON_PRESS(expression, action, sleep)
+
+#define DEADZONE(value, threshold) (fabs(value) > threshold ? value : 0)
 
 namespace vpp {
     /// @brief Sleeps the current thread for a specified amount of time
@@ -44,12 +48,21 @@ namespace vpp {
         return angle;
     };
 
-    const int PORTS[20] = {vex::PORT1, vex::PORT2, vex::PORT3, vex::PORT4, vex::PORT5, vex::PORT6, vex::PORT7, vex::PORT8, vex::PORT9, vex::PORT10, vex::PORT11, vex::PORT12, vex::PORT13, vex::PORT14, vex::PORT15, vex::PORT16, vex::PORT17, vex::PORT18, vex::PORT19, vex::PORT20};
-    // const float resolvePort(unsigned int port) {
-    //     if (port < 1 || port > 20) {
-    //         exit(1);
-    //     }
+    /**
+     * @brief Calculates the conversion factor from inches to degrees for a given wheel
+     * @param wheelDiameter Diameter of the wheel (inches)
+     * @param externalRatio External gear ratio of the wheel (input:output)
+     */
+    const inline float calculateInchesToDegreesConversionFactor(float wheelDiameter, float externalRatio) {
+        return (360 * externalRatio) / (wheelDiameter * M_PI);
+    };
 
-    //     return PORTS[port - 1];
-    // };
+    /**
+     * @brief Calculates the conversion factor from degrees to inches for a given wheel
+     * @param wheelDiameter Diameter of the wheel (inches)
+     * @param externalRatio External gear ratio of the wheel (input:output)
+     */
+    const inline float calculateDegreesToInchesConversionFactor(float wheelDiameter, float externalRatio) {
+        return (wheelDiameter * M_PI) / (360 * externalRatio);
+    };
 }  // namespace vpp

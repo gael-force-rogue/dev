@@ -12,8 +12,6 @@
         motor.get().code;        \
     }
 
-using namespace vex;
-
 namespace vpp {
     /// @brief Represents the different motor cartridges available for motors.
     /// @ref vex::gearSetting
@@ -36,13 +34,13 @@ namespace vpp {
         vex::motor motor;
 
     public:
-        /// @brief Creates a Motor
-        /// @param motor vex::motor
-        Motor(int port) : motor(port) {};
-
-        /// @brief Creates a Motor
-        /// @param port e.g. vex::PORT1, true
-        Motor(int port, bool reverse) : motor(port, reverse) {};
+        /**
+         * @brief Construct a new Motor object
+         * @param port The port of the motor
+         * @param cartridgeType The cartridge type of the motor (RED_36, GREEN_18, BLUE_6)
+         * @param reverse Whether to reverse the motor
+         */
+        Motor(int port, MotorCartridgeType cartridgeType, bool reverse = false) : motor(vex::motor(port, static_cast<vex::gearSetting>(cartridgeType), reverse)) {};
 
         /// @brief Spins the motor.
         /// @param velocity The velocity to spin the motor at ranging from -100 to 100
@@ -53,7 +51,7 @@ namespace vpp {
         /// @brief Stops the motor
         /// @param type The stop mode to use
         inline void stop(MotorStopMode type) {
-            motor.stop(static_cast<brakeType>(type));
+            motor.stop(static_cast<vex::brakeType>(type));
         };
 
         /// @brief Stops the motor with the default stop mode
@@ -64,17 +62,17 @@ namespace vpp {
         /// @brief Sets the defualt stop mode of the motor
         /// @param mode
         inline void setDefaultStopMode(MotorStopMode mode) {
-            motor.setStopping(static_cast<brakeType>(mode));
+            motor.setStopping(static_cast<vex::brakeType>(mode));
         };
 
         /// @brief Returns the current position of the motor in degrees (not clamped)
         /// @return
         inline float position() {
-            return motor.position(deg);
+            return motor.position(vex::deg);
         };
 
         inline void spinToPosition(float position, bool waitForCompletion) {
-            motor.spinToPosition(position, deg, waitForCompletion);
+            motor.spinToPosition(position, vex::deg, waitForCompletion);
         };
 
         /// @brief Resets the position of the motor
@@ -85,8 +83,14 @@ namespace vpp {
         /// @brief Returns the current velocity of the motor
         /// @return Current velocity in percentage
         inline float velocity() {
-            return motor.velocity(pct);
+            return motor.velocity(vex::pct);
         };
+
+        /// @brief Checks if the motor is connected
+        /// @return True if the motor is connected
+        inline bool connected() {
+            return motor.installed();
+        }
     };
 
     class MotorGroup {

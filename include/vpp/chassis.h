@@ -4,92 +4,193 @@
 
 #include "vpp/devices/motor.h"
 #include "vpp/devices/imu.h"
-#include "vpp/devices/rotation.h"
 #include "vpp/algorithms/pid.h"
 #include "vpp/algorithms/odometry.h"
 #include "helpers.h"
 #include <algorithm>
 #include <iostream>
 
+#define ASYNC(action) vex::thread([&]() { action; });
+
+#define USE_CHASSIS_CONSTANTS                                    \
+    auto driveConstants = &chassis.driveAlgorithm.constants;     \
+    auto headingConstants = &chassis.headingAlgorithm.constants; \
+    auto turnConstants = &chassis.turnAlgorithm.constants;       \
+    auto swingConstants = &chassis.swingAlgorithm.constants;     \
+    auto arcConstants = &chassis.arcAlgorithm.constants;
+
+#define START_CHAIN \
+    chassis.motionIsChained = true;
+
+#define END_CHAIN                    \
+    chassis.motionIsChained = false; \
+    chassis.endMotion();             \
+    chassis.stop(HOLD);
+
 namespace vpp {
+    enum TankChassisMotion {
+        DRIVE,
+        TURN,
+        SWING,
+        ARC
+    };
+
     class TankChassis {
     private:
-        PIDConstants defaultDriveConstants;
-        PIDConstants defaultHeadingConstants;
-        PIDConstants defaultTurnConstants;
-        PIDConstants defaultSwingConstants;
+        bool motionIsActive = false;
+
+        float inchesToDegreesConversionFactor;
+        float degreesToInchesConversionFactor;
 
     public:
+        bool motionIsChained = false;
+
         MotorGroup &leftGroup;
         MotorGroup &rightGroup;
         IMU &imu;
 
-        PIDConstants driveConstants;
-        PIDConstants headingConstants;
-        PIDConstants turnConstants;
-        PIDConstants swingConstants;
-
         Odometry odometry;
+
+        PIDAlgorithm driveAlgorithm;
+        PIDAlgorithm headingAlgorithm;
+        PIDAlgorithm turnAlgorithm;
+        PIDAlgorithm swingAlgorithm;
+        PIDAlgorithm arcAlgorithm;
 
         /**
          * @brief Constructs a new TankChassis object
-         * @param left Left motor group
-         * @param right Right motor group
+         * @param left Left MotorGroup
+         * @param right Right MotorGroup
+         * @param imu IMU
+         * @param diameter Diameter of the drivetrain wheels in inches
+         * @param externalRatio External gear ratio of the drivetrain (motor:wheel)
+         * @param offset Offset of the vertical tracking wheel from the center in inches (right is positive & left is negative)
          */
-        TankChassis(MotorGroup &left, MotorGroup &right, IMU &imu) : leftGroup(leftGroup), rightGroup(rightGroup), imu(imu) {};
+        TankChassis(MotorGroup &left, MotorGroup &right, IMU &imu,
+                    float diameter, float externalRatio, float offset)
+            : leftGroup(left), rightGroup(right), imu(imu) {
+            this->inchesToDegreesConversionFactor = (360 * externalRatio) / (diameter * M_PI);
+            this->degreesToInchesConversionFactor = (diameter * M_PI) / (360 * externalRatio);
+            this->odometry.withVerticalTrackerWheel(diameter, externalRatio, offset);
+        };
+
         /**
          * @brief Sets the default drive constants
          * @param kP Proportional constant
          * @param kI Integral constant
          * @param kD Derivative constant
+         * @param iStartError Integral start error
          * @param maxSpeed Maximum speed
          * @param timeout Timeout
          * @param settleError Settle error
          * @param settleTime Settle time
-         * @param maxSettleSpeed Maximum settle speed
          * @return TankChassis*
          */
-        inline TankChassis &withDriveConstants(float kP, float kI, float kD, float maxSpeed, float timeout, float settleError, float settleTime, float maxSettleSpeed) {
-            this->defaultDriveConstants = {kP, kI, kD, maxSpeed, timeout, settleError, settleTime, maxSettleSpeed};
-            this->driveConstants = this->defaultDriveConstants;
+        inline TankChassis &withDriveConstants(float kP, float kI, float kD, float iStartError, float maxSpeed, float timeout, float settleError, float settleTime) {
+            this->driveAlgorithm = PIDAlgorithm("drive", {kP, kI, kD, iStartError, maxSpeed, timeout, settleError, settleTime});
             return *this;
         };
 
         /**
          * @brief Sets the default heading constants
+         * @param kP Proportional constant
+         * @param kI Integral constant
+         * @param kD Derivative constant
+         * @param iStartError Integral start error
+         * @param maxSpeed Maximum speed
+         * @param timeout Timeout
+         * @param settleError Settle error
+         * @param settleTime Settle time
+         * @return TankChassis*
          */
-        inline TankChassis &withHeadingConstants(float kP, float kI, float kD, float maxSpeed, float timeout, float settleError, float settleTime, float maxSettleSpeed) {
-            this->defaultHeadingConstants = {kP, kI, kD, maxSpeed, timeout, settleError, settleTime, maxSettleSpeed};
-            this->headingConstants = this->defaultHeadingConstants;
+        inline TankChassis &withHeadingConstants(float kP, float kI, float kD, float iStartError, float maxSpeed, float timeout, float settleError, float settleTime) {
+            this->headingAlgorithm = PIDAlgorithm("heading", {kP, kI, kD, iStartError, maxSpeed, timeout, settleError, settleTime});
             return *this;
         };
 
         /**
          * @brief Sets the default turn constants
+         * @param kP Proportional constant
+         * @param kI Integral constant
+         * @param kD Derivative constant
+         * @param iStartError Integral start error
+         * @param maxSpeed Maximum speed
+         * @param timeout Timeout
+         * @param settleError Settle error
+         * @param settleTime Settle time
+         * @return TankChassis*
          */
-        inline TankChassis &withTurnConstants(float kP, float kI, float kD, float maxSpeed, float timeout, float settleError, float settleTime, float maxSettleSpeed) {
-            this->defaultTurnConstants = {kP, kI, kD, maxSpeed, timeout, settleError, settleTime, maxSettleSpeed};
-            this->turnConstants = this->defaultTurnConstants;
+        inline TankChassis &withTurnConstants(float kP, float kI, float kD, float iStartError, float maxSpeed, float timeout, float settleError, float settleTime) {
+            this->turnAlgorithm = PIDAlgorithm("turn", {kP, kI, kD, iStartError, maxSpeed, timeout, settleError, settleTime});
             return *this;
         };
 
         /**
          * @brief Sets the default swing constants
+         * @param kP Proportional constant
+         * @param kI Integral constant
+         * @param kD Derivative constant
+         * @param iStartError Integral start error
+         * @param maxSpeed Maximum speed
+         * @param timeout Timeout
+         * @param settleError Settle error
+         * @param settleTime Settle time
+         * @return TankChassis*
          */
-        inline TankChassis &withSwingConstants(float kP, float kI, float kD, float maxSpeed, float timeout, float settleError, float settleTime, float maxSettleSpeed) {
-            this->defaultSwingConstants = {kP, kI, kD, maxSpeed, timeout, settleError, settleTime, maxSettleSpeed};
-            this->swingConstants = this->defaultSwingConstants;
+        inline TankChassis &withSwingConstants(float kP, float kI, float kD, float iStartError, float maxSpeed, float timeout, float settleError, float settleTime) {
+            this->swingAlgorithm = PIDAlgorithm("swing", {kP, kI, kD, iStartError, maxSpeed, timeout, settleError, settleTime});
             return *this;
         };
 
-        inline TankChassis &withOdometry(Odometry odometry) {
-            this->odometry = odometry;
+        /**
+         * @brief Sets the default arc constants
+         * @param kP Proportional constant
+         * @param kI Integral constant
+         * @param kD Derivative constant
+         * @param iStartError Integral start error
+         * @param maxSpeed Maximum speed
+         * @param timeout Timeout
+         * @param settleError Settle error
+         * @param settleTime Settle time
+         * @return TankChassis*
+         */
+        inline TankChassis &withArcConstants(float kP, float kI, float kD, float iStartError, float maxSpeed, float timeout, float settleError, float settleTime) {
+            this->arcAlgorithm = PIDAlgorithm("arc", {kP, kI, kD, iStartError, maxSpeed, timeout, settleError, settleTime});
+            return *this;
         };
 
         /**
-         * @brief Resets the drive constants in case they are changed mid-run
+         * @brief Configures a dedicated vertical tracking wheel for odometry (fallbacks to drivetrain)
+         * @param diameter Diameter of the vertical tracking wheel in inches
+         * @param externalRatio External gear ratio of the vertical tracking wheel (tracker:wheel)
+         * @param offset Offset of the vertical tracking wheel from the center in inches (right is positive & left is negative)
+         * @return TankChassis*
+         */
+        inline TankChassis &withVerticalTrackerWheel(float diameter, float externalRatio, float offset) {
+            this->odometry.withVerticalTrackerWheel(diameter, externalRatio, offset);
+            return *this;
+        };
+
+        /**
+         * @brief Configures a sideways tracking wheel for odometry
+         * @param diameter Diameter of the sideways tracker wheel
+         * @param externalRatio External gear ratio of the sideways tracker wheel
+         * @param offset Offset of the sideways tracker wheel from the center in inches (positive is to the top & negative is to the bottom)
+         */
+        inline TankChassis &withSidewaysTrackerWheel(float diameter, float externalRatio, float offset) {
+            this->odometry.withSidewaysTrackerWheel(diameter, externalRatio, offset);
+            return *this;
+        };
+
+        /**
+         * @brief Resets all constants
          */
         void resetToInitialConstants();
+
+        /**
+         * @brief Calibrates the IMU, resets the motor positions, and resets the Odometry pose
+         */
+        void calibrate();
 
         /**
          * @brief Drives with arcade controls
@@ -143,26 +244,34 @@ namespace vpp {
         };
 
         /**
+         * @brief Stops the chassis with the default stop mode
+         * @param mode COAST, BRAKE, or HOLD
+         */
+        inline void stop() {
+            leftGroup.stop();
+            rightGroup.stop();
+        };
+
+        /// BASIC MOTIONS
+
+        inline void endMotion() {
+            motionIsActive = false;
+            stop(HOLD);
+        };
+
+        /**
          * @brief Drives the chassis a certain distance
          * @param distance Distance to drive
          * @param followThrough Whether to stop after driving (used for motion chaining)
          */
-        void driveDistance(float distance, bool followThrough = false);
-
-        /**
-         * @brief Drives the chassis a certain distance with temporary exit conditions
-         * @param distance Distance to drive
-         * @param maxSpeed Maximum speed
-         * @param followThrough Whether to stop after driving (used for motion chaining)
-         */
-        void driveDistance(float distance, float maxSpeed, bool followThrough = false);
+        void driveDistance(float distance, float earlyExitError = 0);
 
         /**
          * @brief Turns the chassis to a certain angle
          * @param angle Angle to turn to (will be normalized)
          * @param followThrough Whether to stop after turning (used for motion chaining)
          */
-        void turnToAngle(float angle, bool followThrough = false);
+        void turnToAngle(float angle);
 
         /**
          * @brief Turns the chassis to a certain angle with temporary exit conditions
@@ -170,14 +279,14 @@ namespace vpp {
          * @param maxSpeed Maximum speed
          * @param followThrough Whether to stop after turning (used for motion chaining)
          */
-        void turnToAngle(float angle, float maxSpeed, bool followThrough = false);
+        void turnToAngle(float angle, float maxSpeed);
 
         /**
          * @brief Swings the chassis using only the right motors to a certain angle
          * @param angle Angle to swing to (will be normalized)
          * @param followThrough Whether to stop after swinging (used for motion chaining)
          */
-        void leftSwingToAngle(float angle, bool followThrough = false);
+        void leftSwingToAngle(float angle);
 
         /**
          * @brief Swings the chassis using only the right motors to a certain angle with temporary exit conditions
@@ -185,14 +294,14 @@ namespace vpp {
          * @param maxSpeed Maximum speed
          * @param followThrough Whether to stop after swinging (used for motion chaining)
          */
-        void leftSwingToAngle(float angle, float maxSpeed, bool followThrough = false);
+        void leftSwingToAngle(float angle, float maxSpeed);
 
         /**
          * @brief Swings the chassis using only the left motors to a certain angle
          * @param angle Angle to swing to (will be normalized)
          * @param followThrough Whether to stop after swinging (used for motion chaining)
          */
-        void rightSwingToAngle(float angle, bool followThrough = false);
+        void rightSwingToAngle(float angle);
 
         /**
          * @brief Swings the chassis using only the left motors to a certain angle with temporary exit conditions
@@ -200,7 +309,9 @@ namespace vpp {
          * @param maxSpeed Maximum speed
          * @param followThrough Whether to stop after swinging (used for motion chaining)
          */
-        void rightSwingToAngle(float angle, float maxSpeed, bool followThrough = false);
+        void rightSwingToAngle(float angle, float maxSpeed);
+
+        /// ODOMETRY-BASED MOTIONS
 
         /**
          * @brief Determines if the robot has crossed a line 1) perpendicular to a line going through robot and target and 2) going through the target point
@@ -228,41 +339,7 @@ namespace vpp {
          * @param y Y coordinate
          * @param followThrough Whether to stop after driving (used for motion chaining)
          */
-        void driveToPoint(float x, float y, bool followThrough = false) {
-            PIDAlgorithm driveAlgorithm(driveConstants);
-            PIDAlgorithm headingAlgorithm(headingConstants);
-
-            const float startingAngle = atan2(x - odometry.pose.x, y - odometry.pose.y);
-            bool crossedPerpendicularLine = false,
-                 previousCrossedPerpendicularLine = hasCrossedPerpendicularLine(x, y, startingAngle);
-
-            while (!driveAlgorithm.isSettled()) {
-                crossedPerpendicularLine = hasCrossedPerpendicularLine(x, y, startingAngle);
-                if (crossedPerpendicularLine && !previousCrossedPerpendicularLine) break;
-                previousCrossedPerpendicularLine = crossedPerpendicularLine;
-
-                float lateralError = odometry.pose.distance(x, y);
-                float headingError = odometry.pose.angle(x, y);
-
-                float headingScaleFactor = cos(DEGREES_TO_RADIANS(headingError));
-                lateralPower = driveAlgorithm.update(lateralError) * headingScaleFactor;
-                float angularPower = lateralError < driveConstants.settleError ? 0 : headingAlgorithm.update(normalize90(headingError));
-
-                lateralPower = CLAMP(lateralPower, fabs(heading_scale_factor) * driveConstants.maxSpeed);
-                // angularPower = CLAMP(angularPower, headingAlgorithm.config.maxSpeed); -> already done by PIDAlgorithm
-
-                // TODO: minimum drive speed
-                // TODO?: speed scaling
-
-                arcade(lateralPower, angularPower);
-
-                sleep(10);
-            };
-
-            if (!followThrough) {
-                stop(HOLD);
-            }
-        };
+        void driveToPoint(float x, float y);
 
         /**
          * @brief Drives to a pose with a boomerang controller
@@ -271,63 +348,18 @@ namespace vpp {
          * @param setback Setback distance
          * @param followThrough Whether to stop after driving (used for motion chaining)
          */
-        void driveToPose(Pose target, float lead, float setback, bool followThrough = false) {
-            PIDAlgorithm driveAlgorithm(driveConstants);
-            PIDAlgorithm headingAlgorithm(headingConstants);
+        void driveToPose(Pose target, float lead, float setback);
 
-            bool crossedPerpendicularLine = hasCrossedPerpendicularLine(target.x, target.y, target.theta);
-            bool previousCrossedPerpendicularLine = crossedPerpendicularLine;
-            bool crossedCenterLine = false;
-            bool centerLineSide = hasCrossedCenterLine(target.x, target.y, target.theta);
-            bool previousCenterLineSide = centerLineSide;
+        /**
+         * @brief Turns the chassis to a point
+         * @param x X coordinate
+         * @param y Y coordinate
+         * @param offset Offset angle
+         * @param followThrough Whether to stop after turning (used for motion chaining)
+         */
+        void turnToPoint(float x, float y, float offset) {
+            turnAlgorithm.reset();
 
-            while (!driveAlgorithm.isSettled()) {
-                crossedPerpendicularLine = hasCrossedPerpendicularLine(X_position, Y_position, angle);
-                if (crossedPerpendicularLine && !previousCrossedPerpendicularLine) break;
-                previousCrossedPerpendicularLine = crossedPerpendicularLine;
-
-                centerLineSide = hasCrossedCenterLine(X_position, Y_position, angle);
-                if (centerLineSide != previousCenterLineSide) {
-                    crossedCenterLine = true;
-                }
-
-                float distanceToTarget = odometry.pose.distance(target);
-
-                float carrotX = x - sin(DEGREES_TO_RADIANS(angle)) * (lead * distanceToTarget + setback);
-                float carrotY = y - cos(DEGREES_TO_RADIANS(angle)) * (lead * distanceToTarget + setback);
-
-                float driveError = odometry.pose.distance(carrotX, carrotY);
-                float headingError = odometry.pose.angle(carrotX, carrotY);
-
-                if (driveError < driveConstants.settleError || crossedCenterLine || driveError < setback) {
-                    headingError = normalize180(angle) - odometry.pose.theta;
-                    driveError = distanceToTarget;
-                };
-
-                float lateralPower = driveAlgorithm.update(driveError);
-
-                float heading_scale_factor = cos(DEGREES_TO_RADIANS(headingError));
-                lateralPower *= heading_scale_factor;
-                float angularPower = headingAlgorithm.update(normalize90(headingError));
-
-                lateralPower = CLAMP(lateralPower, fabs(heading_scale_factor) * driveAlgorithm.config.maxSpeed);
-                // angularPower = CLAMP(angularPower, headingAlgorithm.config.maxSpeed); -> already done by PIDAlgorithm
-
-                // TODO: minimum drive speed
-                // TODO?: speed scaling
-
-                arcade(lateralPower, angularPower);
-
-                sleep(10);
-            };
-
-            if (!followThrough) {
-                stop(HOLD);
-            }
-        };
-
-        void turnToPoint(float x, float y, float offset, bool followThrough = false) {
-            PIDAlgorithm turnAlgorithm(turnConstants);
             while (!turnAlgorithm.isSettled()) {
                 float error = odometry.pose.angle(x, y) + offset;
                 float output = turnAlgorithm.update(error);
@@ -335,13 +367,29 @@ namespace vpp {
                 sleep(10);
             };
 
-            if (!followThrough) {
-                stop(HOLD);
-            }
+            endMotion();
         }
 
-        void turnToPoint(float x, float y, bool followThrough = false) {
-            turnToPoint(x, y, 0, followThrough);
+        /**
+         * @brief Turns the chassis to a point
+         * @param x X coordinate
+         * @param y Y coordinate
+         * @param followThrough Whether to stop after turning (used for motion chaining)
+         */
+        void turnToPoint(float x, float y) {
+            turnToPoint(x, y, 0);
         };
+
+        /**
+         * @brief does a circular arc to target heading using a ratio on the PID outputs.
+         *
+         * @param heading target angle
+         * @param leftMult 0< leftMult <1 ratio of left side pid output
+         * @param rightMult 0<rightMult<1 ratio of right side pid output
+         * @param maxSpeed max speed the robot should move at
+         * @param async if selected, subsystem actions such as deploying pneumatics during the movement can occur.
+         *
+         */
+        void arc(float targetHeading, float leftMultiplier, float rightMultiplier, float maxSpeed);
     };
 };  // namespace vpp

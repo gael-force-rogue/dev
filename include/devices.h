@@ -1,119 +1,119 @@
+// Define custom devices such as Intake & Lift
+
 #pragma once
 
 #include "vpp.h"
+#include "autons.h"
 
-enum DeviceControlType {
-    DRIVER,
-    ROBOT
+using namespace vpp;
+
+enum LiftState {
+    STANDBY = 0,
+    LOAD = 20,
+    SCORE = 140
 };
 
-enum AllianceColor {
-    RED,
-    BLUE
-};
-
-class Intake : public Motor {
+class Lift {
 private:
-    DeviceControlType control = DRIVER;
-
-    vex::optical *colorSensor;
-    AllianceColor allianceColor;
-    float ringDetectionThreshold;
-
-    /**
-     * @brief Checks color sensor for enemy ring
-     */
-    inline bool enemyRingDetected() {
-        auto rgb = colorSensor->getRgb();
-        return (allianceColor == RED ? rgb.blue : rgb.red) > ringDetectionThreshold;
-    };
+    Motor motor;
 
 public:
-    bool colorSortingEnabled = false;
+    LiftState state;
+    bool macroRunning = false;
 
-    Intake(int port, bool reverse) : Motor(port, reverse) {};
+    Lift(int port, bool reverse) : motor(port, GREEN_18, reverse) {};
 
-    inline Intake &withColorSorting(vex::optical &colorSensor, AllianceColor allianceColor, float ringDetectionThreshold = 100) {
-        this->colorSensor = &colorSensor;
-        this->colorSortingEnabled = true;
-        this->allianceColor = allianceColor;
-        this->ringDetectionThreshold = ringDetectionThreshold;
-        return *this;
-    };
-
-    inline void forward(float velocity = 100) {
-        this->spin(velocity);
-    };
-
-    inline void reverse(float velocity = 100) {
-        this->spin(-velocity);
+    inline void handleDrivercontrol(bool up, bool down) {
+        if (up) {
+            state = SCORE;
+            macroRunning = false;
+            motor.spin(100);
+        } else if (down) {
+            state = SCORE;
+            macroRunning = false;
+            motor.spin(-100);
+        } else if (!macroRunning) {
+            motor.stop();
+        };
     };
 
     /**
-     * @brief Handles driver control of intake
-     * @param forwardPressed Whether the forward button is pressed
-     * @param backwardPressed Whether the backward button is pressed
+     * @brief Toggles between the LiftState.
      */
-    inline void handleDrivercontrol(bool forwardPressed, bool backwardPressed) {
-        if (forwardPressed) {
-            control = DRIVER;
-            forward();
-        } else if (backwardPressed) {
-            control = DRIVER;
-            reverse();
-        } else if (control == DRIVER) {
-            stop();
-        }
-    };
+    inline void toggleState() {
+        macroRunning = true;
 
-    void searchForEnemyRings();
+        if (state == STANDBY) {
+            state = LOAD;
+        } else if (state == LOAD) {
+            state = SCORE;
+        } else {
+            state = STANDBY;
+        };
+
+        motor.spinToPosition(state, true);
+
+        macroRunning = false;
+    };
 };
 
-class Lift : public Motor {
+class Intake {
 private:
-    float defaultPosition;
-    Intake &intake;
-    DeviceControlType control = DRIVER;
+    Motor motor;
+    vex::optical optical;
+    Lift &lift;
+
+    bool launchingEnemyRing = false;
 
 public:
-    Lift(int port, bool reverse, float defaultPosition, Intake &intake) : Motor(port, reverse), defaultPosition(defaultPosition), intake(intake) {};
+    vex::color opponentColor = IS_ALLIANCE_RED ? vex::color::blue : vex::color::red;
 
-    inline float relativePosition() {
-        return normalize360(position());
-    };
+    Intake(int port, bool reverse, vex::optical optical, Lift &lift)
+        : motor(port, GREEN_18, reverse), optical(optical), lift(lift) {};
 
-    inline void spinToRelativePosition(float angle, bool waitForCompletion) {
-        spinToPosition(position() - relativePosition() + angle, waitForCompletion);
+    /**
+     * @brief Turn on the optical sensor
+     */
+    inline void enable() {
+        optical.setLightPower(100);
+        optical.gestureDisable();
     };
 
     /**
-     * @brief Handles driver control of lift
-     * @param forwardPressed Whether the forward button is pressed
-     * @param backwardPressed Whether the backward button is pressed
+     * @brief Turn off the optical sensor
      */
-    inline void handleDrivercontrol(bool forwardPressed, bool backwardPressed) {
-        if (forwardPressed) {
-            control = DRIVER;
-            this->spin(100);
-        } else if (backwardPressed) {
-            control = DRIVER;
-            this->spin(-100);
-        } else if (control == DRIVER) {
-            if (relativePosition() > defaultPosition && relativePosition() < 180) {
-                returnToDefaultPosition(false);
+    inline void disable() {
+        optical.setLightPower(0);
+    };
+
+    /**
+     * @brief Handle's drivecontrol
+     * @param inb In button
+     * @param outb Out button
+     */
+    inline void handleDrivercontrol(bool inb, bool outb) {
+        if (!launchingEnemyRing) {
+            if (inb) {
+                motor.spin(100);
+            } else if (outb) {
+                motor.spin(-100);
             } else {
-                stop();
+                motor.stop();
             }
-        }
+        };
     };
 
     /**
-     * @brief Returns lift to default position
-     * @param waitForCompletion Whether to wait for the lift to reach the default position
+     * @brief Handle's the color sort macro
      */
-    inline void returnToDefaultPosition(bool waitForCompletion) {
-        spinToRelativePosition(defaultPosition, true);
-    };
+    inline void handleColorSortMacro() {
+        if (optical.color() == opponentColor && motor.velocity() != 0) {
+            launchingEnemyRing = true;
 
-    void score();
+            motor.stop(HOLD);
+            sleep(300);
+
+            launchingEnemyRing = false;
+        };
+    };
 };

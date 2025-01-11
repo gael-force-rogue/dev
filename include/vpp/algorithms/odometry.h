@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vex.h"
+#include "vpp/helpers.h"
 
 #include <cmath>
 
@@ -32,19 +33,14 @@ namespace vpp {
          * @param B Pose B
          * @return Distance between the two poses
          */
-        inline float distance(Pose B) const {
-            return sqrt(pow(B.x - x, 2) + pow(B.y - y, 2));
-        };
+        float distance(Pose B);
 
         /**
          * @brief Calculate the distance to a point
          * @param x X coordinate of the point
          * @param y Y coordinate of the point
          */
-        inline float distance(float x, float y) const {
-            // Can also be written as: sqrt(pow(x - this->x, 2) + pow(y - this->y, 2));
-            return hypot(x - this->x, y - this->y);
-        };
+        float distance(float x, float y);
 
         /**
          * @brief Get the angle to a point
@@ -53,25 +49,22 @@ namespace vpp {
          * @param y Y coordinate
          * @return float Angle to point
          */
-        float angle(float x, float y) const {
-            return RADIANS_TO_DEGREES(atan2(y - this->y, x - this->x)) - theta;
-        };
+        float angle(float x, float y);
     };
 
+    /**
+     * @brief Odometry class
+     * @param diameter Diameter of the drivetrain wheels (inches)
+     * @param externalRatio External gear ratio of the drivetrain
+     */
     class Odometry {
     private:
-        float drivetrainDegreesToInchesRatio = 0;
+        // Configuration
+        float verticalTrackerOffset = 0;
+        float verticalTrackerDegreesToInchesConversionFactor = 0;
 
-        vex::rotation *verticalRotational = nullptr;
-        bool useRightVerticalTracker = false;
-        bool useVerticalRotational = false;
-        float verticalTrackerOffset;
-        float verticalTrackerDegreesToInchesRatio;
-
-        vex::rotation *sidewaysRotational = nullptr;
-        bool useSidewaysRotational = false;
-        float sidewaysTrackerOffset;
-        float sidewaysTrackerDegreesToInchesRatio;
+        float sidewaysTrackerOffset = 0;
+        float sidewaysTrackerDegreesToInchesConversionFactor = 0;
 
         // Odometry State
         float previousForwardPosition = 0;
@@ -83,82 +76,47 @@ namespace vpp {
         Odometry() = default;
 
         /**
-         * @brief Adds bare minimum odometry to the chassis
-         * @param diameter Diameter of the drivetrain wheels (inches)
-         * @param externalRatio External gear ratio of the drivetrain
+         * @brief Checks if Odometry is usable
          */
-        Odometry(float diameter, float externalRatio) {
-            this->drivetrainDegreesToInchesRatio = externalRatio / 360.0 * M_PI * diameter;
-        };
-
-        /**
-         * @brief Adds a vertical tracking wheel to the odometry algorithm
-         * @param port Port of the tracking wheel
-         * @param diameter Diameter of the tracking wheel (inches)
-         * @param offset Offset of the tracking wheel from the center in inches (positive is to the right & negative is to the left)
-         * @param gearRatio Gear ratio of the tracking wheel
-         */
-        inline Odometry &withVerticalTrackerWheel(int port, float diameter, float offset) {
-            this->verticalRotational = &vex::rotation(port);
-            this->useVerticalRotational = true;
-            this->verticalTrackerOffset = offset;
-            this->verticalTrackerDegreesToInchesRatio = (diameter * M_PI) / 360;
-            return *this;
-        };
-
-        /**
-         * @brief Adds a sideways tracking wheel to the odometry algorithm
-         * @param port Port of the tracking wheel
-         * @param diameter Diameter of the tracking wheel (inches)
-         * @param offset Offset of the tracking wheel from the center (inches)
-         * @param gearRatio Gear ratio of the tracking wheel
-         */
-        inline Odometry &withSidewaysTrackerWheel(int port, float diameter, float offset) {
-            this->sidewaysRotational = &vex::rotation(port);
-            this->useSidewaysRotational = true;
-            this->sidewaysTrackerOffset = offset;
-            this->sidewaysTrackerDegreesToInchesRatio = (diameter * M_PI) / 360;
-            return *this;
+        inline bool isConfigured() {
+            return verticalTrackerDegreesToInchesConversionFactor != 0;
         };
 
         /**
          * @brief Resets the pose of the robot
          */
-        void resetPose() {
+        inline void resetPose() {
             pose = {0, 0, 0};
         };
 
         /**
-         * @brief Updates the pose of the robot
-         * @param drivetrainVerticalPosition Vertical position of the drivetrain
+         * @brief Adds bare minimum odometry to the chassis
+         * @param diameter Diameter of the vertical wheel
+         * @param externalRatio External gear ratio of the vertical wheel
+         * @param offset Offset of the vertical wheel from the center in inches (positive is to the right & negative is to the left)
          */
-        void update(float drivetrainVerticalPosition, float rawTheta) {
-            float rawForward = useVerticalRotational ? (verticalRotational->position(deg) * this->verticalTrackerDegreesToInchesRatio) : (drivetrainVerticalPosition * drivetrainDegreesToInchesRatio);
-            float rawSideways = useSidewaysRotational ? sidewaysRotational->position(deg) * this->sidewaysTrackerDegreesToInchesRatio : 0;
-
-            float deltaForward = rawForward - pose.x;
-            float deltaSideways = rawSideways - pose.y;
-            float thetaRadians = DEGREES_TO_RADIANS(rawTheta);
-            float previousThetaRadians = DEGREES_TO_RADIANS(pose.theta);
-            float deltaThetaRadians = thetaRadians - previousThetaRadians;
-            this->previousForwardPosition = rawForward;
-            this->previousSidewaysPosition = rawSideways;
-            this->pose.theta = rawTheta;
-
-            float localX = deltaThetaRadians == 0 ? deltaSideways : (2 * sin(deltaThetaRadians / 2)) * ((deltaSideways / deltaThetaRadians) + sidewaysTrackerOffset);
-            float localY = deltaThetaRadians == 0 ? deltaForward : (2 * sin(deltaThetaRadians / 2)) * ((deltaForward / deltaThetaRadians) + verticalTrackerOffset);
-
-            bool hasMovedAtAll = localX != 0 || localY != 0;
-            float localPolarTheta = hasMovedAtAll ? atan2(localY, localX) : 0;
-            float localPolarRadius = hasMovedAtAll ? sqrt(pow(localX, 2) + pow(localY, 2)) : 0;
-
-            float globalPolarTheta = localPolarTheta - previousThetaRadians - (deltaThetaRadians / 2);
-
-            float deltaGlobalX = localPolarRadius * cos(globalPolarTheta);
-            float deltaGlobalY = localPolarRadius * sin(globalPolarTheta);
-
-            pose.x += deltaGlobalX;
-            pose.y += deltaGlobalY;
+        inline void withVerticalTrackerWheel(float diameter, float externalRatio, float offset) {
+            this->verticalTrackerOffset = offset;
+            this->verticalTrackerDegreesToInchesConversionFactor = calculateDegreesToInchesConversionFactor(diameter, externalRatio);
         };
+
+        /**
+         * @brief Adds sideways tracking
+         * @param diameter Diameter of the sideways tracker wheel
+         * @param externalRatio External gear ratio of the sideways tracker wheel
+         * @param offset Offset of the sideways tracker wheel from the center in inches (positive is to the top & negative is to the bottom)
+         */
+        inline void withSidewaysTrackerWheel(float diameter, float externalRatio, float offset) {
+            this->sidewaysTrackerOffset = offset;
+            this->sidewaysTrackerDegreesToInchesConversionFactor = calculateDegreesToInchesConversionFactor(diameter, externalRatio);
+        };
+
+        /**
+         * @brief Updates the pose of the robot
+         * @param verticalPosition Vertical wheel's position (degrees)
+         * @param sidewaysPosition Sideways wheel's position (degrees) - 0 if not using sideways wheel
+         * @param rawTheta Raw theta value from the IMU (imu.heading())
+         */
+        void update(float verticalPosition, float sidewaysPosition, float rawTheta);
     };
 };  // namespace vpp
