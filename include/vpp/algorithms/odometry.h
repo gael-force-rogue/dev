@@ -58,13 +58,14 @@ namespace vpp {
      * @param externalRatio External gear ratio of the drivetrain
      */
     class Odometry {
-    private:
         // Configuration
         float verticalTrackerOffset = 0;
         float verticalTrackerDegreesToInchesConversionFactor = 0;
+        vex::rotation verticalTrackerWheel;
 
         float sidewaysTrackerOffset = 0;
         float sidewaysTrackerDegreesToInchesConversionFactor = 0;
+        vex::rotation sidewaysTrackerWheel;
 
         // Odometry State
         float previousForwardPosition = 0;
@@ -73,7 +74,10 @@ namespace vpp {
     public:
         Pose pose;
 
-        Odometry() = default;
+        Odometry() {
+            verticalTrackerWheel = vex::rotation(vex::PORT21, true);
+            sidewaysTrackerWheel = vex::rotation(vex::PORT21, true);
+        };
 
         /**
          * @brief Checks if Odometry is usable
@@ -94,6 +98,19 @@ namespace vpp {
          * @param diameter Diameter of the vertical wheel
          * @param externalRatio External gear ratio of the vertical wheel
          * @param offset Offset of the vertical wheel from the center in inches (positive is to the right & negative is to the left)
+         * @param tracker Rotation sensor of the vertical wheel
+         */
+        inline void withVerticalTrackerWheel(float diameter, float externalRatio, float offset, vex::rotation tracker) {
+            this->verticalTrackerOffset = offset;
+            this->verticalTrackerDegreesToInchesConversionFactor = calculateDegreesToInchesConversionFactor(diameter, externalRatio);
+            this->verticalTrackerWheel = tracker;
+        };
+
+        /**
+         * @brief Adds bare minimum odometry to the chassis
+         * @param diameter Diameter of the vertical wheel
+         * @param externalRatio External gear ratio of the vertical wheel
+         * @param offset Offset of the vertical wheel from the center in inches (positive is to the right & negative is to the left)
          */
         inline void withVerticalTrackerWheel(float diameter, float externalRatio, float offset) {
             this->verticalTrackerOffset = offset;
@@ -106,9 +123,10 @@ namespace vpp {
          * @param externalRatio External gear ratio of the sideways tracker wheel
          * @param offset Offset of the sideways tracker wheel from the center in inches (positive is to the top & negative is to the bottom)
          */
-        inline void withSidewaysTrackerWheel(float diameter, float externalRatio, float offset) {
+        inline void withSidewaysTrackerWheel(float diameter, float externalRatio, float offset, vex::rotation tracker) {
             this->sidewaysTrackerOffset = offset;
             this->sidewaysTrackerDegreesToInchesConversionFactor = calculateDegreesToInchesConversionFactor(diameter, externalRatio);
+            this->sidewaysTrackerWheel = tracker;
         };
 
         /**
@@ -118,5 +136,19 @@ namespace vpp {
          * @param rawTheta Raw theta value from the IMU (imu.heading())
          */
         void update(float verticalPosition, float sidewaysPosition, float rawTheta);
+
+        /**
+         * @brief Converts a vertical position to inches
+         */
+        inline float verticalPositionInInches() {
+            return verticalTrackerWheel.position(vex::deg) * verticalTrackerDegreesToInchesConversionFactor;
+        };
+
+        /**
+         * @brief Converts a vertical position to inches
+         */
+        inline float sidewaysPositionInInches() {
+            return sidewaysTrackerWheel.position(vex::deg) * sidewaysTrackerDegreesToInchesConversionFactor;
+        };
     };
 };  // namespace vpp

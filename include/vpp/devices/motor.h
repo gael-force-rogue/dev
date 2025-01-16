@@ -86,6 +86,12 @@ namespace vpp {
             return motor.velocity(vex::pct);
         };
 
+        /// @brief Sets the velocity of the motor
+        /// @param velocity The velocity to set the motor to
+        inline void setVelocity(float velocity) {
+            motor.setVelocity(velocity, vex::pct);
+        };
+
         /// @brief Checks if the motor is connected
         /// @return True if the motor is connected
         inline bool connected() {
@@ -105,18 +111,18 @@ namespace vpp {
         /// @param velocity velocity (-100 to 100)
         inline void spin(float velocity) {
             FOR_MOTORS(spin(velocity));
-        }
+        };
 
         /// @brief Stops all motors
         /// @param type stop mode
         inline void stop(MotorStopMode mode) {
             FOR_MOTORS(stop(mode));
-        }
+        };
 
         /// @brief Stops all motors with the default stop mode
         inline void stop() {
             FOR_MOTORS(stop());
-        }
+        };
 
         /// @brief Sets the default stop mode of the motor group
         /// @param mode
@@ -132,11 +138,11 @@ namespace vpp {
                 sum += motor.get().position();
             }
             return sum / motorCount;
-        }
+        };
 
         /// @brief Resets the position of all motors in the group
         inline void resetPosition() {
             FOR_MOTORS(resetPosition());
-        }
+        };
     };
 };  // namespace vpp

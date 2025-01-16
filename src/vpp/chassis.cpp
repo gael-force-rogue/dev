@@ -37,10 +37,10 @@ void TankChassis::driveDistance(float distance, float earlyExitError) {
     headingAlgorithm.reset();
 
     const float startingHeading = imu.heading();
-    const float startingPosition = (rightGroup.averagePosition() * degreesToInchesConversionFactor);
+    const float startingPosition = odometry.verticalPositionInInches();
 
     while (!driveAlgorithm.isSettled() && motionIsActive) {
-        float lateralError = distance + startingPosition - (rightGroup.averagePosition() * degreesToInchesConversionFactor);
+        float lateralError = distance + startingPosition - odometry.verticalPositionInInches();
         float angularError = startingHeading - imu.heading();
 
         if (earlyExitError != 0 && fabs(lateralError) < earlyExitError) break;
@@ -50,7 +50,7 @@ void TankChassis::driveDistance(float distance, float earlyExitError) {
 
         arcade(lateralPower, angularPower);
 
-        sleep(10);
+        sleep(20);
     };
 
     endMotion();
@@ -152,11 +152,10 @@ void TankChassis::arc(float targetHeading, float leftMultiplier, float rightMult
     endMotion();
 }
 
-void TankChassis::driveToPoint(float x, float y) {
+void TankChassis::driveToPoint(float x, float y, float backwards) {
     if (!odometry.isConfigured()) return;
 
     motionIsActive = true;
-    bool backwards = y < odometry.pose.y;
 
     driveAlgorithm.reset();
     headingAlgorithm.reset();

@@ -30,12 +30,10 @@ namespace vpp {
     };
 
     class PIDAlgorithm {
-    private:
-        PIDConstants defaultConstants;
-
     public:
         std::string name;
         PIDConstants constants;
+        PIDConstants defaultConstants;
 
         float runningIntegral = 0,
               previousMotorPower = 0,
@@ -92,7 +90,9 @@ namespace vpp {
 
             previousError = error;
 
-            return CLAMP((constants.kP * error) + (constants.kI * runningIntegral) + (constants.kD * derivative), constants.maxSpeed);
+            float power = CLAMP((constants.kP * error) + (constants.kI * runningIntegral) + (constants.kD * derivative), constants.maxSpeed);
+
+            return power;
         };
 
         inline bool isSettled() {

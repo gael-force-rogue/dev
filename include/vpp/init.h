@@ -5,7 +5,7 @@
 
 // Since these are universal and VPP may need it, we define it for you
 extern vex::competition Compeittion;
-extern Controller MainController;
+extern Controller mainController;
 extern vex::brain Brain;
 
 #define BRAIN_PRINTF(line, format, ...) \

@@ -14,7 +14,7 @@ namespace vpp {
          * @param port Port of the Pneumatic
          * @param isDeployed Default state of the Pneumatic - make sure this matches your pneumatic wiring
          */
-        Pneumatic(vex::triport::port port) : pneumatic(vex::pneumatics(port)) {};
+        Pneumatic(vex::triport::port port) : pneumatic(port) {};
 
         inline void toggle() {
             if (isDeployed) {
@@ -23,7 +23,7 @@ namespace vpp {
                 open();
             }
             isDeployed = !isDeployed;
-        }
+        };
 
         inline void open() {
             pneumatic.open();

@@ -4,15 +4,14 @@
 #pragma once
 
 #include "vpp.h"
+#include "autons.h"
 #include "devices.h"
 
-int MAIN_THREAD_ID;
-
-extern Motor left1, left2;
-extern Motor right1, right2;
+extern Motor left1, left2, left3;
+extern Motor right1, right2, right3;
 extern MotorGroup leftMotorGroup, rightMotorGroup;
 
-extern Pneumatic clamp, hang, knocker;
+extern vex::pneumatics clamp, knocker;
 
 extern IMU imu;
 extern TankChassis chassis;

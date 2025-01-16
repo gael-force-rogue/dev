@@ -9,31 +9,28 @@ using namespace vpp;
 
 enum LiftState {
     STANDBY = 0,
-    LOAD = 20,
-    SCORE = 140
+    LOAD = 80,
+    SCORE = 270
 };
 
-class Lift {
-private:
-    Motor motor;
-
+class Lift : public Motor {
 public:
     LiftState state;
     bool macroRunning = false;
 
-    Lift(int port, bool reverse) : motor(port, GREEN_18, reverse) {};
+    Lift(int port, bool reverse) : Motor(port, GREEN_18, reverse) {};
 
     inline void handleDrivercontrol(bool up, bool down) {
         if (up) {
             state = SCORE;
             macroRunning = false;
-            motor.spin(100);
+            this->spin(100);
         } else if (down) {
             state = SCORE;
             macroRunning = false;
-            motor.spin(-100);
+            this->spin(-100);
         } else if (!macroRunning) {
-            motor.stop();
+            this->stop();
         };
     };
 
@@ -51,7 +48,7 @@ public:
             state = STANDBY;
         };
 
-        motor.spinToPosition(state, true);
+        this->spinToPosition(state, true);
 
         macroRunning = false;
     };
@@ -61,15 +58,14 @@ class Intake {
 private:
     Motor motor;
     vex::optical optical;
-    Lift &lift;
 
     bool launchingEnemyRing = false;
 
 public:
     vex::color opponentColor = IS_ALLIANCE_RED ? vex::color::blue : vex::color::red;
 
-    Intake(int port, bool reverse, vex::optical optical, Lift &lift)
-        : motor(port, GREEN_18, reverse), optical(optical), lift(lift) {};
+    Intake(int port, bool reverse, vex::optical optical)
+        : motor(port, GREEN_18, reverse), optical(optical) {};
 
     /**
      * @brief Turn on the optical sensor
@@ -117,3 +113,6 @@ public:
         };
     };
 };
+
+extern Lift lift;
+extern Intake intake;

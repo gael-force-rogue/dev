@@ -164,10 +164,12 @@ namespace vpp {
          * @param diameter Diameter of the vertical tracking wheel in inches
          * @param externalRatio External gear ratio of the vertical tracking wheel (tracker:wheel)
          * @param offset Offset of the vertical tracking wheel from the center in inches (right is positive & left is negative)
+         * @param port Port of the tracking wheel
+         * @param reverse Whether the tracking wheel is reversed
          * @return TankChassis*
          */
-        inline TankChassis &withVerticalTrackerWheel(float diameter, float externalRatio, float offset) {
-            this->odometry.withVerticalTrackerWheel(diameter, externalRatio, offset);
+        inline TankChassis &withVerticalTrackerWheel(float diameter, float externalRatio, float offset, vex::rotation tracker) {
+            this->odometry.withVerticalTrackerWheel(diameter, externalRatio, offset, tracker);
             return *this;
         };
 
@@ -177,8 +179,8 @@ namespace vpp {
          * @param externalRatio External gear ratio of the sideways tracker wheel
          * @param offset Offset of the sideways tracker wheel from the center in inches (positive is to the top & negative is to the bottom)
          */
-        inline TankChassis &withSidewaysTrackerWheel(float diameter, float externalRatio, float offset) {
-            this->odometry.withSidewaysTrackerWheel(diameter, externalRatio, offset);
+        inline TankChassis &withSidewaysTrackerWheel(float diameter, float externalRatio, float offset, vex::rotation tracker) {
+            this->odometry.withSidewaysTrackerWheel(diameter, externalRatio, offset, tracker);
             return *this;
         };
 
@@ -339,7 +341,7 @@ namespace vpp {
          * @param y Y coordinate
          * @param followThrough Whether to stop after driving (used for motion chaining)
          */
-        void driveToPoint(float x, float y);
+        void driveToPoint(float x, float y, float backwards);
 
         /**
          * @brief Drives to a pose with a boomerang controller

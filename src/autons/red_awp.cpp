@@ -1,5 +1,5 @@
-#include "autons.h"
+#include "config.h"
 
 void red_awp() {
-
+    chassis.driveDistance(16, 0);
 };

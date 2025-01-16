@@ -25,6 +25,10 @@ SRC_A  = makefile
 INC_F  = include
 
 # build targets
+# pre_build_script:
+# 	# python3 prebuild.py
+# 	echo test
+
 all: $(BUILD)/$(PROJECT).bin
 
 # include build rules
