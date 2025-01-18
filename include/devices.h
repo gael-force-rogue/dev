@@ -9,7 +9,7 @@ using namespace vpp;
 
 enum LiftState {
     STANDBY = 0,
-    LOAD = 80,
+    LOAD = 75,
     SCORE = 270
 };
 
@@ -82,6 +82,18 @@ public:
         optical.setLightPower(0);
     };
 
+    inline void forward() {
+        motor.spin(100);
+    };
+
+    inline void backward() {
+        motor.spin(-100);
+    };
+
+    inline void stop() {
+        motor.stop();
+    }
+
     /**
      * @brief Handle's drivecontrol
      * @param inb In button
@@ -90,9 +102,9 @@ public:
     inline void handleDrivercontrol(bool inb, bool outb) {
         if (!launchingEnemyRing) {
             if (inb) {
-                motor.spin(100);
+                forward();
             } else if (outb) {
-                motor.spin(-100);
+                backward();
             } else {
                 motor.stop();
             }

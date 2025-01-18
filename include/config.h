@@ -17,3 +17,6 @@ extern IMU imu;
 extern TankChassis chassis;
 
 extern Intake intake;
+
+void setPIDConstants();
+void setBackwardsPIDConstants();

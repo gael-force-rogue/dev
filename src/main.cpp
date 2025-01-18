@@ -40,13 +40,22 @@ vex::rotation sidewaysTrackerWheel(vex::PORT21, true);
 // 0.7
 
 IMU imu(vex::PORT3);
-TankChassis chassis = TankChassis(leftMotorGroup, rightMotorGroup, imu, 2.75, 1, 6.5)
-                          .withDriveConstants(3, 0.1, 0, 5, 100, 2000, 0.5, 100)
-                          .withHeadingConstants(0.7, 0, 0, 0, 20, 2000, 0.5, 0)
-                          .withTurnConstants(0.5, 0, 1, 0, 75, 1000, 0.5, 200)
-                          .withSwingConstants(1, 0, 3, 3, 100, 1300, 2, 100)
-                          .withVerticalTrackerWheel(2, 1, -0.5, verticalTrackerWheel)
-                          .withSidewaysTrackerWheel(2.75, 1, -1.25, sidewaysTrackerWheel);
+TankChassis chassis = TankChassis(leftMotorGroup, rightMotorGroup, imu, 2.75, 1, 6.5);
+
+void setPIDConstants() {
+    chassis
+        .withDriveConstants(3, 0.1, 0, 5, 100, 3000, 0.5, 100)
+        .withHeadingConstants(0.7, 0, 0, 0, 20, 2000, 0.5, 0)
+        .withTurnConstants(0.5, 0, 1, 0, 75, 1000, 0.5, 200)
+        .withSwingConstants(1, 0, 3, 3, 100, 1300, 2, 100)
+        .withVerticalTrackerWheel(2, 1, -0.5, verticalTrackerWheel)
+        .withSidewaysTrackerWheel(2.75, 1, -1.25, sidewaysTrackerWheel);
+};
+
+void setBackwardsPIDConstants() {
+    chassis
+        .withDriveConstants(3, 0, 2, 0, 40, 3000, 0.5, 100);
+};
 
 Lift lift(vex::PORT18, true);
 Intake intake(vex::PORT19, true, vex::optical(vex::PORT15, false));
@@ -144,6 +153,7 @@ void autonomous() {
 };
 
 int main() {
+    setPIDConstants();
     chassis.calibrate();
     verticalTrackerWheel.resetPosition();
     sidewaysTrackerWheel.resetPosition();

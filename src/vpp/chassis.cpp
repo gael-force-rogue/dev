@@ -6,7 +6,7 @@
 
 using namespace vpp;
 
-void TankChassis::resetToInitialConstants() {
+void TankChassis::resetConstants() {
     this->driveAlgorithm.resetConstants();
     this->headingAlgorithm.resetConstants();
     this->turnAlgorithm.resetConstants();
@@ -47,6 +47,8 @@ void TankChassis::driveDistance(float distance, float earlyExitError) {
 
         float lateralPower = driveAlgorithm.update(lateralError);
         float angularPower = headingAlgorithm.update(angularError);
+
+        std::cout << lateralError << std::endl;
 
         arcade(lateralPower, angularPower);
 

@@ -187,7 +187,7 @@ namespace vpp {
         /**
          * @brief Resets all constants
          */
-        void resetToInitialConstants();
+        void resetConstants();
 
         /**
          * @brief Calibrates the IMU, resets the motor positions, and resets the Odometry pose

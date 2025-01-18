@@ -53,13 +53,11 @@ namespace vpp {
         };
 
         /**
-         * @brief Resets the PIDAlgorithm timers & constants
-         * @param params motion-specific PIDMotionParams
+         * @brief Resets the PIDAlgorithm timers
          */
         inline void reset() {
             safetyTimer.clear();
             idleTimer.clear();
-            constants = defaultConstants;
             runningIntegral = 0;
             previousMotorPower = 0;
             previousError = 0;
