@@ -118,7 +118,7 @@ void drivercontrol() {
 
     while (true) {
         float y = mainController.leftY();
-        float x = mainController.rightX();
+        float x = mainController.rightX() * 0.6;
 
         chassis.arcade(y, x);
 

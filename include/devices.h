@@ -40,13 +40,14 @@ public:
     inline void toggleState() {
         macroRunning = true;
 
-        if (state == STANDBY) {
-            state = LOAD;
-        } else if (state == LOAD) {
-            state = SCORE;
-        } else {
-            state = STANDBY;
-        };
+        // if (state == STANDBY) {
+        //     state = LOAD;
+        // } else if (state == LOAD) {
+        //     state = SCORE;
+        // } else {
+        //     state = STANDBY;
+        // };
+        state = LOAD;
 
         this->spinToPosition(state, true);
 
