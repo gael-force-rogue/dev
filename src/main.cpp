@@ -36,9 +36,6 @@ vex::pneumatics knocker(Brain.ThreeWirePort.A);
 vex::rotation verticalTrackerWheel(vex::PORT5, false);
 vex::rotation sidewaysTrackerWheel(vex::PORT21, true);
 
-// 3 0.05
-// 0.7
-
 IMU imu(vex::PORT3);
 TankChassis chassis = TankChassis(leftMotorGroup, rightMotorGroup, imu, 2.75, 1, 6.5);
 
@@ -97,11 +94,22 @@ void odometryThreadF() {
     };
 };
 
+void antiJamThreadF() {
+    while (true) {
+        if (intake.trueVelocity() == 0) {
+            intake.backward();
+            wait(100);
+            intake.forward();
+        };
+        wait(20);
+    };
+};
+
 void liftMacroThreadF() {
     std::cout << "Lift macro thread: " << vex::this_thread::get_id() << std::endl;
 
     while (true) {
-        IF_BUTTON_PRESS(mainController.ButtonUp(), lift.toggleState(), 20);
+        5t IF_BUTTON_PRESS(mainController.ButtonUp(), lift.toggleState(), 20);
         IF_BUTTON_PRESS(mainController.ButtonA(), clamp.open(), 20);
         IF_BUTTON_PRESS(mainController.ButtonB(), clamp.close(), 20);
         // IF_BUTTON_PRESS(mainController.ButtonY(), knocker.toggle(), 20);
@@ -118,7 +126,7 @@ void drivercontrol() {
 
     while (true) {
         float y = mainController.leftY();
-        float x = mainController.rightX() * 0.6;
+        float x = mainController.rightX()*;
 
         chassis.arcade(y, x);
 

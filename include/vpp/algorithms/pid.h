@@ -29,7 +29,7 @@ namespace vpp {
             : kP(kP), kI(kI), kD(kD), iStartError(iStartError), maxSpeed(maxSpeed), timeout(timeout), settleError(settleError), settleTime(settleTime) {};
     };
 
-    class PIDAlgorithm {
+        class PIDAlgorithm {
     public:
         std::string name;
         PIDConstants constants;
